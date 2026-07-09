@@ -1,0 +1,33 @@
+[Unit]
+Description=PHP 8.5 FastCGI Process Manager
+Documentation=man:php-fpm(8)
+After=network.target
+
+[Service]
+Type=notify
+ExecStart=/usr/sbin/php-fpm --nodaemonize --fpm-config /etc/php85/php-fpm.conf
+ExecReload=/bin/kill -USR2 $MAINPID
+PIDFile=/run/php85-fpm/php-fpm.pid
+RuntimeDirectory=php85-fpm
+RuntimeDirectoryMode=0755
+LogsDirectory=php85-fpm
+LogsDirectoryMode=0755
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+NoNewPrivileges=true
+ReadWritePaths=/var/log/php85-fpm /var/lib/php85-fpm /run/php85-fpm
+AmbientCapabilities=
+CapabilityBoundingSet=
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

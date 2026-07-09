@@ -1,0 +1,21 @@
+# PHP 8.5 RPM macros for VMware Photon OS
+# Install: cp packaging/macros.php85 /etc/rpm/macros.php85
+
+%php85_ver          8.5.8
+%php85_major        85
+%php85_api          20250812
+%php85_zend_api     420250812
+%php85_prefix       php85
+%php85_sname        php
+%php85_confdir      /etc/php85
+%php85_extdir       %{php85_confdir}/conf.d
+%php85_moddir       /usr/lib64/php85/modules
+%php85_includedir   /usr/include/php85
+%php85_fpm_user     php-fpm
+%php85_fpm_group    php-fpm
+%php85_fpm_logdir   /var/log/php85-fpm
+%php85_fpm_rundir   /run/php85-fpm
+
+%php85_cflags       -O2 -flto=auto -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC
+%php85_cxxflags     -O2 -flto=auto -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC
+%php85_ldflags      -Wl,-z,relro -Wl,-z,now -flto=auto

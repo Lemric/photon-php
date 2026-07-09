@@ -1,0 +1,53 @@
+%include macros.inc
+
+%define php85_extname igbinary
+
+Name:           php85-pecl-igbinary
+Version:        3.2.16
+Release:        1%{?dist}
+Summary:        PHP %{php85_ver} igbinary serializer extension (PECL)
+License:        PHP-3.01
+URL:            https://pecl.php.net/package/igbinary
+Source0:        https://pecl.php.net/get/igbinary-%{version}.tgz
+
+BuildRequires:  php85-devel = %{php85_ver}
+BuildRequires:  gcc
+BuildRequires:  make
+BuildRequires:  autoconf
+BuildRequires:  automake
+BuildRequires:  libtool
+
+Requires:       php85-common = %{php85_ver}
+Requires:       php85-cli = %{php85_ver}
+
+%description
+Igbinary is a drop-in replacement for the standard PHP serializer.
+It stores PHP data structures in a compact binary form.
+
+%prep
+%autosetup -n igbinary-%{version}
+
+%build
+export CFLAGS="-O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC"
+%{__phpize}
+./configure
+%make_build
+
+%install
+%make_install
+install -d %{buildroot}%{php85_extdir}
+install -d %{buildroot}%{php85_moddir}
+if [ -f modules/igbinary.so ]; then
+    install -m 0755 modules/igbinary.so %{buildroot}%{php85_moddir}/igbinary.so
+fi
+echo "extension=igbinary.so" > %{buildroot}%{php85_extdir}/30-igbinary.ini
+find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
+
+%files
+%defattr(-,root,root,-)
+%{php85_moddir}/igbinary.so
+%config(noreplace) %{php85_extdir}/30-igbinary.ini
+
+%changelog
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 3.2.16-1
+- Initial igbinary PECL build for PHP 8.5 on Photon OS

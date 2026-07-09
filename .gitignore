@@ -1,0 +1,18 @@
+# Build artifacts
+.rpmbuild/
+.rpmbuild-*/
+repo/*/
+!repo/README.md
+*.rpm
+*.src.rpm
+
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log

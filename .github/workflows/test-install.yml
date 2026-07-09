@@ -1,0 +1,115 @@
+name: Test RPM Installation
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  PHP_VERSION: '8.5.8'
+  PHOTON_VERSION: '5.0'
+
+jobs:
+  build-and-test:
+    name: Build, install and test (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+        include:
+          - arch: x86_64
+            platform: linux/amd64
+          - arch: aarch64
+            platform: linux/arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build RPMs
+        run: |
+          docker run --rm \
+            --platform ${{ matrix.platform }} \
+            -v "${{ github.workspace }}:/build" \
+            -w /build \
+            -e PHP_VERSION="${{ env.PHP_VERSION }}" \
+            -e ARCH="${{ matrix.arch }}" \
+            -e OUTPUT_DIR="/build/repo/${{ matrix.arch }}" \
+            -e RPMBUILD_DIR="/build/.rpmbuild-${{ matrix.arch }}" \
+            photon:${{ env.PHOTON_VERSION }} \
+            bash -c "
+              chmod +x scripts/*.sh && \
+              scripts/install-build-deps.sh && \
+              scripts/build-rpm.sh all && \
+              tdnf install -y createrepo_c && \
+              ARCH=${{ matrix.arch }} scripts/build-repo.sh
+            "
+
+      - name: Test installation and functionality
+        run: |
+          docker run --rm \
+            --platform ${{ matrix.platform }} \
+            -v "${{ github.workspace }}/repo/${{ matrix.arch }}:/repo:ro" \
+            photon:${{ env.PHOTON_VERSION }} \
+            bash -c "
+              set -euo pipefail
+
+              echo '==> Configuring repository'
+              cat > /etc/yum.repos.d/photon-php.repo << 'EOF'
+              [photon-php]
+              name=Photon PHP 8.5
+              baseurl=file:///repo
+              enabled=1
+              gpgcheck=0
+              EOF
+              tdnf makecache
+
+              echo '==> Installing PHP packages'
+              tdnf install -y \
+                php85 \
+                php85-cli \
+                php85-fpm \
+                php85-common \
+                php85-opcache \
+                php85-mbstring \
+                php85-intl \
+                php85-xml \
+                php85-curl \
+                php85-gd \
+                php85-zip \
+                php85-bcmath \
+                php85-mysqlnd \
+                php85-pgsql \
+                php85-pecl-redis \
+                php85-pecl-igbinary
+
+              echo '==> Test: php -v'
+              php -v | grep -E 'PHP 8\.5\.[0-9]+'
+
+              echo '==> Test: php -m (core extensions)'
+              php -m | grep -E '^(mbstring|intl|curl|gd|zip|bcmath|mysqli|pdo_mysql|pgsql|pdo_pgsql|Zend OPcache)$'
+
+              echo '==> Test: PECL extensions'
+              php -m | grep -E '^(redis|igbinary)$'
+
+              echo '==> Test: php-fpm configuration'
+              php-fpm -t
+
+              echo '==> Test: security settings'
+              php -r 'echo ini_get(\"expose_php\");' | grep -q '^0$' || \
+                php -i | grep -q 'expose_php => Off'
+
+              echo '==> Test: OPcache enabled'
+              php -r 'echo extension_loaded(\"Zend OPcache\") ? \"ok\" : \"fail\";' | grep -q ok
+
+              echo '==> Test: php-fpm user exists'
+              id php-fpm
+
+              echo '==> All tests passed'
+            "

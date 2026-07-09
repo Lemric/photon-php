@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Photon PHP RPM Repository</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { max-width: 52rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    code, pre { background: rgba(127,127,127,.15); padding: .1rem .35rem; border-radius: .25rem; }
+    pre { padding: 1rem; overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid rgba(127,127,127,.35); padding: .5rem .75rem; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>Photon PHP RPM Repository</h1>
+  <p>PHP <strong>@PHP_VERSION@</strong> packages for VMware Photon OS 5.x.</p>
+  <p>Base URL: <code>https://pkgs.photon.lemric.com</code></p>
+
+  <h2>Install</h2>
+  <pre>ARCH=$(uname -m)
+curl -fsSL https://pkgs.photon.lemric.com/photon-php.repo \
+  | sed "s|/x86_64|/${ARCH}|g" \
+  > /etc/yum.repos.d/photon-php.repo
+
+tdnf makecache
+tdnf install -y php85 php85-fpm php85-opcache</pre>
+
+  <h2>Repository URLs</h2>
+  <table>
+    <tr><th>Architecture</th><th>baseurl</th></tr>
+    <tr><td>x86_64</td><td><code>https://pkgs.photon.lemric.com/x86_64</code></td></tr>
+    <tr><td>aarch64</td><td><code>https://pkgs.photon.lemric.com/aarch64</code></td></tr>
+  </table>
+
+  <h2>tdnf configuration</h2>
+  <pre>[photon-php]
+name=Photon PHP 8.5
+baseurl=https://pkgs.photon.lemric.com/x86_64
+enabled=1
+gpgcheck=0</pre>
+
+  <p><a href="https://github.com/@GITHUB_REPOSITORY@">Source on GitHub</a></p>
+</body>
+</html>
