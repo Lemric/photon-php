@@ -16,9 +16,9 @@
 %global php85_fpm_group    php-fpm
 %global php85_fpm_logdir   /var/log/php85-fpm
 %global php85_fpm_rundir   /run/php85-fpm
-%global php85_cflags       -O2 -flto=auto -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC
-%global php85_cxxflags     -O2 -flto=auto -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC
-%global php85_ldflags      -Wl,-z,relro -Wl,-z,now -flto=auto
+%global php85_cflags       -O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC
+%global php85_cxxflags     -O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC
+%global php85_ldflags      -Wl,-z,relro -Wl,-z,now
 %global debug_package %{nil}
 
 Name:           php85
@@ -381,5 +381,7 @@ Requires:       %{name}-common = %{version}-%{release}
 %doc README.md
 
 %changelog
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-2
+- Drop -flto=auto (breaks OPcache JIT global register variables on GCC 14)
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-1
 - Initial PHP 8.5.8 build for VMware Photon OS 5.x
