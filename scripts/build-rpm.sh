@@ -91,6 +91,7 @@ fetch_remote_sources() {
     local spec_name
     spec_name="$(basename "${spec_file}")"
     local spec_path="${RPMBUILD_DIR}/SPECS/${spec_name}"
+    local spec_dir="${RPMBUILD_DIR}/SPECS"
     local sourcedir="${RPMBUILD_DIR}/SOURCES"
     local urls=""
 
@@ -101,13 +102,33 @@ fetch_remote_sources() {
         return 1
     fi
 
-    # rpmspec -P expands all macros; extract http(s) Source lines only.
-    urls="$(rpmspec -P \
+    # Run rpmspec from SPECS/ so %include fragments (php85-*.spec, macros.inc) resolve.
+    urls="$(cd "${spec_dir}" && rpmspec -P \
         --define "_topdir ${RPMBUILD_DIR}" \
         --define "dist .${DIST}" \
-        "${spec_path}" 2>/dev/null \
+        "${spec_name}" 2>/dev/null \
         | grep -E '^Source[0-9]+:[[:space:]]*https?://' \
         | sed -E 's/^Source[0-9]+:[[:space:]]*//' || true)"
+
+    if [ -z "${urls}" ]; then
+        local version="" name=""
+        version="$(cd "${spec_dir}" && rpmspec -q --qf '%{version}' \
+            --define "_topdir ${RPMBUILD_DIR}" \
+            --define "dist .${DIST}" \
+            "${spec_name}" 2>/dev/null || true)"
+        name="$(cd "${spec_dir}" && rpmspec -q --qf '%{name}' \
+            --define "_topdir ${RPMBUILD_DIR}" \
+            --define "dist .${DIST}" \
+            "${spec_name}" 2>/dev/null || true)"
+        while IFS= read -r line; do
+            [[ "${line}" =~ ^Source[0-9]+[[:space:]]*:[[:space:]]*(https?://.+) ]] || continue
+            local url="${BASH_REMATCH[1]}"
+            url="${url//%\{version\}/${version}}"
+            url="${url//%\{name\}/${name}}"
+            [[ "${url}" == *"%{"* ]] && continue
+            urls+="${url}"$'\n'
+        done < "${spec_path}"
+    fi
 
     if [ -z "${urls}" ]; then
         log "ERROR: no remote Source URLs found in ${spec_name}" >&2
