@@ -13,6 +13,7 @@ Source0:        https://github.com/skvadrik/re2c/releases/download/%{version}/re
 
 BuildRequires:  gcc
 BuildRequires:  libstdc++-devel
+BuildRequires:  glibc-devel
 BuildRequires:  make
 BuildRequires:  cmake
 

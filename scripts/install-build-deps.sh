@@ -21,6 +21,7 @@ log "Installing Photon OS base build toolchain"
 install_pkgs \
     gcc \
     libstdc++-devel \
+    glibc-devel \
     make \
     cmake \
     autoconf \
@@ -73,14 +74,7 @@ rpmdev-setuptree 2>/dev/null || {
     mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 }
 
-log "Installing PHP 8.5 RPM macros"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-install -m 0644 "${PROJECT_ROOT}/packaging/macros.php85" /etc/rpm/macros.php85
-install -m 0644 "${PROJECT_ROOT}/packaging/macros.urlhelper" /etc/rpm/macros.urlhelper
-
-log "RPM download helper configured (curl)"
-
 log "Build dependencies installed successfully."
+log "Note: RPM 6 on Photon OS requires pre-downloaded sources (handled by build-rpm.sh)."
 log "Note: re2c >= 3.x and libzip are built from source RPMs by scripts/build-rpm.sh"
 log "Next: run scripts/build-rpm.sh to build re2c, libzip, and PHP RPMs."

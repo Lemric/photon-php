@@ -38,3 +38,11 @@ VMware Photon OS uses different package names than Fedora/RHEL. This project tar
 | `rabbitmq-c` | `packaging/rabbitmq-c.spec` |
 
 Build order: `re2c` → `libzip` → `php85` → PECL extensions (handled by `scripts/build-rpm.sh`).
+
+### RPM 6 on Photon OS
+
+Photon OS 5 ships **RPM 6.0**. Custom macro files passed via `rpmbuild --macros` break built-in RPM macros. This project:
+
+- embeds `%define` globals directly in spec files
+- pre-downloads sources with `curl` in `build-rpm.sh`
+- uses only `--define "_topdir ..."` when invoking `rpmbuild`

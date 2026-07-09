@@ -15,10 +15,6 @@ RPMBUILD_DIR="${RPMBUILD_DIR:-${PROJECT_ROOT}/.rpmbuild}"
 OUTPUT_DIR="${OUTPUT_DIR:-${PROJECT_ROOT}/repo/${ARCH}}"
 
 MACROS_FILE="${PROJECT_ROOT}/packaging/macros.php85"
-URLHELPER_MACROS="${PROJECT_ROOT}/packaging/macros.urlhelper"
-RPM_MACROS=(--macros="${MACROS_FILE}" --macros="${URLHELPER_MACROS}")
-RPM_TOPDIR_DEFINE=(--define "_topdir ${RPMBUILD_DIR}")
-RPM_SOURCEDIR_DEFINE=(--define "_sourcedir ${RPMBUILD_DIR}/SOURCES")
 
 log() { echo "[build-rpm] $*"; }
 
@@ -34,12 +30,10 @@ fetch_remote_sources() {
 
     if command -v rpmspec >/dev/null 2>&1; then
         version="$(rpmspec -q --qf '%{version}' \
-            "${RPM_MACROS[@]}" \
-            "${RPM_TOPDIR_DEFINE[@]}" \
+            --define "_topdir ${RPMBUILD_DIR}" \
             "${spec_path}" 2>/dev/null || true)"
         name="$(rpmspec -q --qf '%{name}' \
-            "${RPM_MACROS[@]}" \
-            "${RPM_TOPDIR_DEFINE[@]}" \
+            --define "_topdir ${RPMBUILD_DIR}" \
             "${spec_path}" 2>/dev/null || true)"
     fi
 
@@ -69,14 +63,6 @@ setup_rpmbuild() {
     log "Setting up rpmbuild tree at ${RPMBUILD_DIR}"
     mkdir -p "${RPMBUILD_DIR}"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
     mkdir -p "${OUTPUT_DIR}"
-
-    if [ -f /etc/rpm/macros.php85 ]; then
-        :
-    elif [ "$(id -u)" -eq 0 ]; then
-        install -m 0644 "${MACROS_FILE}" /etc/rpm/macros.php85
-    else
-        log "Installing macros via --macros flag (not root)"
-    fi
 }
 
 build_spec() {
@@ -102,9 +88,8 @@ build_spec() {
     fetch_remote_sources "${spec_file}"
 
     rpmbuild -ba \
-        "${RPM_MACROS[@]}" \
-        "${RPM_TOPDIR_DEFINE[@]}" \
-        "${RPM_SOURCEDIR_DEFINE[@]}" \
+        --define "_topdir ${RPMBUILD_DIR}" \
+        --define "_sourcedir ${RPMBUILD_DIR}/SOURCES" \
         --define "dist .${DIST}" \
         --target "${ARCH}" \
         "${RPMBUILD_DIR}/SPECS/${spec_name}"

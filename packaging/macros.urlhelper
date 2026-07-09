@@ -1,2 +1,3 @@
-# RPM macros — configure curl as the source download helper on Photon OS
-%_urlhelper curl -fsSL -o
+# RPM 6 on Photon OS — reference only, not loaded via rpmbuild --macros.
+# Sources are pre-downloaded by scripts/build-rpm.sh using curl.
+%define _urlhelper curl -fsSL -o
