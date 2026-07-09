@@ -59,10 +59,13 @@ Header files and pkg-config metadata for building against libzip.
 
 %files devel
 %{_libdir}/pkgconfig/libzip.pc
+%{_libdir}/cmake/libzip/
 %{_includedir}/zip.h
 %{_includedir}/zipconf.h
 
 %changelog
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 1.11.4-3
+- Package cmake config files in libzip-devel
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 1.11.4-2
 - Install libraries to %{_libdir} (fix lib64 vs lib mismatch on x86_64)
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 1.11.4-1
