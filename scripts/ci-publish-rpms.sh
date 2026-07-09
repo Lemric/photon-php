@@ -69,6 +69,12 @@ if os.path.isfile("repodata.json"):
 architectures = {}
 all_packages = set()
 
+def prior_arch(existing_data, arch_name):
+    raw = existing_data.get("architectures")
+    if isinstance(raw, dict):
+        return raw.get(arch_name, {})
+    return {}
+
 for arch in ("x86_64", "aarch64"):
     rpms = sorted(glob.glob(f"{arch}/*.rpm"))
     if not rpms:
@@ -78,7 +84,7 @@ for arch in ("x86_64", "aarch64"):
     pkg_names = sorted({name.rsplit(".", 2)[0] for name in rpm_names})
     all_packages.update(pkg_names)
 
-    prev = (existing.get("architectures") or {}).get(arch, {})
+    prev = prior_arch(existing, arch)
     architectures[arch] = {
         "package_count": len(rpm_names),
         "packages": rpm_names,

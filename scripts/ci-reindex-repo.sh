@@ -59,7 +59,6 @@ for arch in ("x86_64", "aarch64"):
     pkg_names = sorted({name.rsplit(".", 2)[0] for name in rpm_names})
     all_packages.update(pkg_names)
 
-    prev = (existing.get("architectures") or {}).get(arch, {})
     architectures[arch] = {
         "package_count": len(rpm_names),
         "packages": rpm_names,
