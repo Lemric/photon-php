@@ -173,12 +173,12 @@ build_spec() {
 
     fetch_remote_sources "${spec_file}"
 
-    rpmbuild -ba \
+    (cd "${RPMBUILD_DIR}/SPECS" && rpmbuild -ba \
         --define "_topdir ${RPMBUILD_DIR}" \
         --define "_sourcedir ${RPMBUILD_DIR}/SOURCES" \
         --define "dist .${DIST}" \
         --target "${ARCH}" \
-        "${RPMBUILD_DIR}/SPECS/${spec_name}"
+        "${spec_name}")
 
     find "${RPMBUILD_DIR}/RPMS/${ARCH}" -name '*.rpm' ! -name '*.src.rpm' \
         -exec cp -f {} "${OUTPUT_DIR}/" \;
