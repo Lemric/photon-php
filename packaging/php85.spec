@@ -62,6 +62,8 @@ Provides:       php = %{version}
 Provides:       php-cli = %{version}
 Provides:       php-fpm = %{version}
 Provides:       php-common = %{version}
+Requires:       %{name}-cli = %{version}-%{release}
+Requires:       %{name}-common = %{version}-%{release}
 
 %include php85-common.spec
 %include php85-cli.spec
@@ -315,7 +317,9 @@ export LDFLAGS="%{php85_ldflags}"
 %make_build
 
 %install
-%make_install
+# PHP's Makefile uses INSTALL_ROOT, not DESTDIR — %%make_install would install
+# into the build container's real filesystem and leave BUILDROOT empty.
+make install INSTALL_ROOT=%{buildroot}
 
 install -d %{buildroot}%{php85_confdir}
 install -d %{buildroot}%{php85_extdir}
@@ -369,11 +373,8 @@ rm -rf %{buildroot}%{_datadir}/php
 rm -rf %{buildroot}%{_localstatedir}/log/php-fpm.log 2>/dev/null || true
 
 %check
-%{buildroot}%{_bindir}/php -v
-%{buildroot}%{_bindir}/php -m | head -20
-
-Requires:       %{name}-cli = %{version}-%{release}
-Requires:       %{name}-common = %{version}-%{release}
+sapi/cli/php -n -v
+sapi/cli/php -n -m | head -20
 
 %files
 %defattr(-,root,root,-)
