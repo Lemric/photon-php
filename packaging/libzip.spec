@@ -1,7 +1,7 @@
 # libzip — ZIP library required by PHP zip extension
 # Not available in Photon OS 5.x default repositories.
 
-%global libzip_ver 1.11.3
+%global libzip_ver 1.11.4
 
 Name:           libzip
 Version:        %{libzip_ver}
@@ -9,7 +9,7 @@ Release:        1%{?dist}
 Summary:        ZIP archive compatibility library
 License:        BSD-3-Clause
 URL:            https://libzip.org/
-Source0:        https://github.com/nih-at/libzip/releases/download/v%{version}/libzip-%{version}.tar.xz
+Source0:        https://github.com/nih-at/libzip/releases/download/v%{libzip_ver}/libzip-%{libzip_ver}.tar.gz
 
 BuildRequires:  gcc
 BuildRequires:  libstdc++-devel
@@ -61,5 +61,7 @@ Header files and pkg-config metadata for building against libzip.
 %{_includedir}/zipconf.h
 
 %changelog
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 1.11.4-1
+- Bump to libzip 1.11.4 (.tar.gz release tarball)
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 1.11.3-1
 - Initial libzip build for Photon OS PHP zip extension

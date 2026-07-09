@@ -81,31 +81,27 @@ fetch_remote_sources() {
     spec_name="$(basename "${spec_file}")"
     local spec_path="${RPMBUILD_DIR}/SPECS/${spec_name}"
     local sourcedir="${RPMBUILD_DIR}/SOURCES"
-    local version="" name=""
+    local urls=""
 
     mkdir -p "${sourcedir}"
 
-    if command -v rpmspec >/dev/null 2>&1; then
-        version="$(rpmspec -q --qf '%{version}' \
-            --define "_topdir ${RPMBUILD_DIR}" \
-            "${spec_path}" 2>/dev/null || true)"
-        name="$(rpmspec -q --qf '%{name}' \
-            --define "_topdir ${RPMBUILD_DIR}" \
-            "${spec_path}" 2>/dev/null || true)"
+    if ! command -v rpmspec >/dev/null 2>&1; then
+        log "ERROR: rpmspec not found — cannot expand Source URLs for ${spec_name}" >&2
+        return 1
     fi
 
-    if [ -z "${version}" ]; then
-        version="$(grep -E '^Version[[:space:]]*:' "${spec_path}" | awk '{print $2}' | head -1)"
-    fi
-    if [ -z "${name}" ]; then
-        name="$(grep -E '^Name[[:space:]]*:' "${spec_path}" | awk '{print $2}' | head -1)"
+    urls="$(rpmspec -q -P \
+        --define "_topdir ${RPMBUILD_DIR}" \
+        --define "dist .${DIST}" \
+        "${spec_path}" 2>/dev/null || true)"
+
+    if [ -z "${urls}" ]; then
+        log "ERROR: failed to expand Source URLs from ${spec_name}" >&2
+        return 1
     fi
 
-    while IFS= read -r line; do
-        [[ "${line}" =~ ^Source[0-9]+[[:space:]]*:[[:space:]]*(https?://.+) ]] || continue
-        local url="${BASH_REMATCH[1]}"
-        url="${url//%\{version\}/${version}}"
-        url="${url//%\{name\}/${name}}"
+    while IFS= read -r url; do
+        [[ "${url}" =~ ^https?:// ]] || continue
         local dest="${sourcedir}/$(basename "${url}")"
         if [ -f "${dest}" ]; then
             log "Source already present: $(basename "${dest}")"
@@ -113,7 +109,7 @@ fetch_remote_sources() {
         fi
         log "Downloading source: ${url}"
         curl -fSL -o "${dest}" "${url}"
-    done < "${spec_path}"
+    done <<< "${urls}"
 }
 
 setup_rpmbuild() {
