@@ -15,6 +15,7 @@ permissions:
   contents: write
 
 env:
+  PHP_VERSION: '8.5.8'
   PHOTON_VERSION: '5.0'
   REPO_BASEURL: https://pkgs.photon.lemric.com
   PUBLISH_BRANCH: gh-pages
@@ -42,6 +43,11 @@ jobs:
       - name: Build and publish bootstrap packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PHP_VERSION: ${{ env.PHP_VERSION }}
+          REPO_BASEURL: ${{ env.REPO_BASEURL }}
+          PUBLISH_BRANCH: ${{ env.PUBLISH_BRANCH }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           chmod +x scripts/*.sh
@@ -50,9 +56,7 @@ jobs:
             local stage="$1"
             if [ "${{ github.event_name }}" = push ] \
               && { [ "${{ github.ref }}" = refs/heads/main ] || [ "${{ github.ref }}" = refs/heads/master ]; }; then
-              GITHUB_REPOSITORY="${{ github.repository }}" \
-              GITHUB_SHA="${{ github.sha }}" \
-                scripts/ci-publish-rpms.sh "${{ matrix.arch }}" "repo/${{ matrix.arch }}" "${stage}"
+              scripts/ci-publish-rpms.sh "${{ matrix.arch }}" "repo/${{ matrix.arch }}" "${stage}"
             fi
           }
 

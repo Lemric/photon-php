@@ -7,17 +7,17 @@ ARCH="${1:?architecture required (x86_64 or aarch64)}"
 SOURCE_DIR="${2:?source directory with *.rpm required}"
 STAGE="${3:-packages}"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-SOURCE_DIR="$(cd "${SOURCE_DIR}" && pwd)"
-PAGES_DIR="${PROJECT_ROOT}/pages"
-
 PHP_VERSION="${PHP_VERSION:-8.5.8}"
 REPO_BASEURL="${REPO_BASEURL:-https://pkgs.photon.lemric.com}"
 PUBLISH_BRANCH="${PUBLISH_BRANCH:-gh-pages}"
 GITHUB_REPOSITORY="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 GITHUB_SHA="${GITHUB_SHA:-local}"
 GITHUB_TOKEN="${GITHUB_TOKEN:?GITHUB_TOKEN is required}"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SOURCE_DIR="$(cd "${SOURCE_DIR}" && pwd)"
+PAGES_DIR="${PROJECT_ROOT}/pages"
 
 log() { echo "[ci-publish] $*"; }
 

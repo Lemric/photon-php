@@ -69,6 +69,11 @@ jobs:
       - name: Build and publish PHP packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PHP_VERSION: ${{ env.PHP_VERSION }}
+          REPO_BASEURL: ${{ env.REPO_BASEURL }}
+          PUBLISH_BRANCH: ${{ env.PUBLISH_BRANCH }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
         run: |
           set -euo pipefail
           chmod +x scripts/*.sh
@@ -76,13 +81,9 @@ jobs:
           test -d "published/${{ matrix.arch }}"
           ls "published/${{ matrix.arch }}"/*.rpm >/dev/null
 
-          COMMIT_SHA="${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}"
-
           publish_stage() {
             local stage="$1"
-            GITHUB_REPOSITORY="${{ github.repository }}" \
-            GITHUB_SHA="${COMMIT_SHA}" \
-              scripts/ci-publish-rpms.sh "${{ matrix.arch }}" "repo/${{ matrix.arch }}" "${stage}"
+            scripts/ci-publish-rpms.sh "${{ matrix.arch }}" "repo/${{ matrix.arch }}" "${stage}"
           }
 
           run_stage() {
