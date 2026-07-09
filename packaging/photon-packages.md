@@ -37,7 +37,34 @@ VMware Photon OS uses different package names than Fedora/RHEL. This project tar
 | `libzip` | `packaging/libzip.spec` |
 | `rabbitmq-c` | `packaging/rabbitmq-c.spec` |
 
-Build order: `re2c` → `libzip` → `php85` → PECL extensions (handled by `scripts/build-rpm.sh`).
+## Build order (RPM dependency chain)
+
+`scripts/build-rpm.sh` builds and installs packages in this order. Each stage
+publishes RPMs to `repo/$ARCH/`, refreshes a local `tdnf` repo, then installs
+the built package before the next stage starts.
+
+```
+re2c ──┬──> libzip ──┬──> php85 ──> PECL extensions
+       │             │
+rabbitmq-c ──────────┘ (required by php85-pecl-amqp only; built before extensions)
+```
+
+| Stage | Spec | Required by |
+|-------|------|-------------|
+| 1. `re2c` | `packaging/re2c.spec` | `php85` (`BuildRequires: re2c >= 3`) |
+| 2. `libzip` | `packaging/libzip.spec` | `php85-zip` (`BuildRequires: libzip-devel`) |
+| 3. `rabbitmq-c` | `packaging/rabbitmq-c.spec` | `php85-pecl-amqp` |
+| 4. `php` | `packaging/php85.spec` | PECL specs (`BuildRequires: php85-devel`) |
+| 5. `extensions` | `extensions/*.spec` | — |
+
+Commands:
+
+```bash
+scripts/build-rpm.sh all          # full repository
+scripts/build-rpm.sh php          # re2c → libzip → php85 (chain enforced)
+scripts/build-rpm.sh extensions # full chain through php85, then PECL
+scripts/build-rpm.sh deps       # bootstrap only: re2c, libzip, rabbitmq-c
+```
 
 ### RPM 6 on Photon OS
 

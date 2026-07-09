@@ -30,6 +30,7 @@ install_pkgs \
     linux-api-headers \
     make \
     cmake \
+    python3 \
     autoconf \
     automake \
     libtool \
@@ -82,5 +83,5 @@ rpmdev-setuptree 2>/dev/null || {
 
 log "Build dependencies installed successfully."
 log "Note: RPM 6 on Photon OS requires pre-downloaded sources (handled by build-rpm.sh)."
-log "Note: re2c >= 3.x and libzip are built from source RPMs by scripts/build-rpm.sh"
-log "Next: run scripts/build-rpm.sh to build re2c, libzip, and PHP RPMs."
+log "Bootstrap order: scripts/build-rpm.sh re2c → libzip → rabbitmq-c → php → extensions"
+log "Next: run scripts/build-rpm.sh all (or a single stage: php, extensions, deps, ...)"

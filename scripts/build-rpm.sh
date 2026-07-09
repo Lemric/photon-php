@@ -1,5 +1,13 @@
 #!/bin/bash
 # build-rpm.sh — Build PHP 8.5 and PECL extension RPMs for Photon OS
+#
+# Dependency order (each stage installs into the local repo, then tdnf):
+#   1. re2c      — Photon ships 1.x; PHP 8.5 needs >= 3.x
+#   2. libzip    — not in Photon repos; required by php85-zip
+#   3. rabbitmq-c — not in Photon repos; required by php85-pecl-amqp
+#   4. php85     — requires re2c >= 3 and libzip-devel
+#   5. extensions — require php85-devel
+#
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,7 +24,56 @@ OUTPUT_DIR="${OUTPUT_DIR:-${PROJECT_ROOT}/repo/${ARCH}}"
 
 MACROS_FILE="${PROJECT_ROOT}/packaging/macros.php85"
 
+# Ordered stages — do not reorder without updating BuildRequires in specs.
+BUILD_STAGES=(re2c libzip rabbitmq-c php extensions)
+
 log() { echo "[build-rpm] $*"; }
+
+refresh_local_repo() {
+    OUTPUT_DIR="${OUTPUT_DIR}" REPO_ID=photon-php-build \
+        "${SCRIPT_DIR}/setup-local-repo.sh"
+}
+
+binary_rpms_in_output() {
+    local pattern="${1:?pattern required}"
+    find "${OUTPUT_DIR}" -maxdepth 1 -name "${pattern}" ! -name '*.src.rpm' -type f 2>/dev/null
+}
+
+install_from_local_repo() {
+    local pkg="${1:?package name required}"
+    local rpms
+    rpms="$(binary_rpms_in_output "${pkg}-*.${ARCH}.rpm" | tr '\n' ' ')"
+    if [ -z "${rpms}" ]; then
+        log "ERROR: package ${pkg} not found in ${OUTPUT_DIR}" >&2
+        return 1
+    fi
+    refresh_local_repo
+    if tdnf install -y "${pkg}" 2>/dev/null; then
+        return 0
+    fi
+    log "Installing ${pkg} via rpm (tdnf repo unavailable)"
+    # shellcheck disable=SC2086
+    rpm -Uvh --replacepkgs ${rpms}
+}
+
+re2c_version_ok() {
+    command -v re2c >/dev/null 2>&1 || return 1
+    local ver
+    ver="$(re2c --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1 || echo 0)"
+    awk "BEGIN {exit !(${ver:-0} >= 3.0)}"
+}
+
+libzip_installed() {
+    pkg-config --exists libzip 2>/dev/null || rpm -q libzip-devel >/dev/null 2>&1
+}
+
+rabbitmq_c_installed() {
+    rpm -q rabbitmq-c-devel >/dev/null 2>&1
+}
+
+php85_devel_installed() {
+    rpm -q php85-devel >/dev/null 2>&1
+}
 
 fetch_remote_sources() {
     local spec_file="$1"
@@ -74,13 +131,11 @@ build_spec() {
 
     cp -f "${spec_file}" "${RPMBUILD_DIR}/SPECS/${spec_name}"
 
-    # Copy include fragments for php85.spec
     if [[ "${spec_name}" == "php85.spec" ]]; then
         cp -f "${PROJECT_ROOT}/packaging/php85-"*.spec "${RPMBUILD_DIR}/SPECS/"
         cp -f "${PROJECT_ROOT}/packaging/configs/"* "${RPMBUILD_DIR}/SOURCES/"
     fi
 
-    # Copy extension macro includes
     if [[ "${spec_file}" == */extensions/* ]]; then
         cp -f "${PROJECT_ROOT}/extensions/macros.inc" "${RPMBUILD_DIR}/SPECS/"
     fi
@@ -94,81 +149,109 @@ build_spec() {
         --target "${ARCH}" \
         "${RPMBUILD_DIR}/SPECS/${spec_name}"
 
-    find "${RPMBUILD_DIR}/RPMS/${ARCH}" -name '*.rpm' -exec cp -f {} "${OUTPUT_DIR}/" \;
+    find "${RPMBUILD_DIR}/RPMS/${ARCH}" -name '*.rpm' ! -name '*.src.rpm' \
+        -exec cp -f {} "${OUTPUT_DIR}/" \;
     find "${RPMBUILD_DIR}/SRPMS" -name '*.src.rpm' -exec cp -f {} "${OUTPUT_DIR}/" \; 2>/dev/null || true
+
+    refresh_local_repo
 }
 
 detect_php_api() {
-  if command -v php-config >/dev/null 2>&1; then
-    local api
-    api="$(php-config --phpapi 2>/dev/null || true)"
-    if [ -n "${api}" ]; then
-      log "Detected PHP API version: ${api}"
-      sed -i "s/%global php85_api.*/%global php85_api          ${api}/" "${MACROS_FILE}" 2>/dev/null || \
-        sed -i '' "s/%global php85_api.*/%global php85_api          ${api}/" "${MACROS_FILE}" 2>/dev/null || true
+    if command -v php-config >/dev/null 2>&1; then
+        local api
+        api="$(php-config --phpapi 2>/dev/null || true)"
+        if [ -n "${api}" ]; then
+            log "Detected PHP API version: ${api}"
+            sed -i "s/%global php85_api.*/%global php85_api          ${api}/" "${MACROS_FILE}" 2>/dev/null || \
+                sed -i '' "s/%global php85_api.*/%global php85_api          ${api}/" "${MACROS_FILE}" 2>/dev/null || true
+        fi
     fi
-  fi
+}
+
+ensure_re2c() {
+    if re2c_version_ok; then
+        log "re2c $(re2c --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1) already available"
+        return 0
+    fi
+    build_re2c
 }
 
 build_re2c() {
-    log "Building re2c >= 3.x (required by PHP 8.5)"
-    if command -v re2c >/dev/null 2>&1; then
-        local ver
-        ver="$(re2c --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1)"
-        if awk "BEGIN {exit !(${ver:-0} >= 3.0)}"; then
-            log "System re2c ${ver} is sufficient, skipping RPM build"
-            return 0
-        fi
-    fi
+    log "Stage 1/5: re2c >= 3.x (PHP 8.5 build dependency)"
     build_spec "${PROJECT_ROOT}/packaging/re2c.spec"
-    tdnf install -y "${OUTPUT_DIR}"/re2c-*.rpm 2>/dev/null || \
-        rpm -Uvh --nodeps "${OUTPUT_DIR}"/re2c-*.rpm 2>/dev/null || true
+    install_from_local_repo re2c
+    re2c_version_ok || { log "ERROR: re2c >= 3 not available after install"; exit 1; }
+    re2c --version
 }
 
-build_rabbitmq_c() {
-    if rpm -q rabbitmq-c-devel >/dev/null 2>&1; then
+ensure_libzip() {
+    if libzip_installed; then
+        log "libzip-devel already installed"
+        return 0
+    fi
+    build_libzip
+}
+
+build_libzip() {
+    log "Stage 2/5: libzip (php85-zip dependency)"
+    build_spec "${PROJECT_ROOT}/packaging/libzip.spec"
+    install_from_local_repo libzip
+    install_from_local_repo libzip-devel
+}
+
+ensure_rabbitmq_c() {
+    if rabbitmq_c_installed; then
         log "rabbitmq-c-devel already installed"
         return 0
     fi
     if tdnf info rabbitmq-c-devel >/dev/null 2>&1; then
-        tdnf install -y rabbitmq-c-devel && return 0
-    fi
-    log "Building rabbitmq-c from source (not in Photon repos)"
-    build_spec "${PROJECT_ROOT}/packaging/rabbitmq-c.spec"
-    tdnf install -y "${OUTPUT_DIR}"/rabbitmq-c-*.rpm 2>/dev/null || \
-        rpm -Uvh --nodeps "${OUTPUT_DIR}"/rabbitmq-c-*.rpm 2>/dev/null || true
-}
-
-build_libzip() {
-    if pkg-config --exists libzip 2>/dev/null || rpm -q libzip-devel >/dev/null 2>&1; then
-        log "libzip already installed"
+        tdnf install -y rabbitmq-c-devel
         return 0
     fi
-    log "Building libzip (not in Photon OS repos)"
-    build_spec "${PROJECT_ROOT}/packaging/libzip.spec"
-    tdnf install -y "${OUTPUT_DIR}"/libzip-*.rpm 2>/dev/null || \
-        rpm -Uvh --nodeps "${OUTPUT_DIR}"/libzip-*.rpm 2>/dev/null || true
+    build_rabbitmq_c
+}
+
+build_rabbitmq_c() {
+    log "Stage 3/5: rabbitmq-c (php85-pecl-amqp dependency)"
+    build_spec "${PROJECT_ROOT}/packaging/rabbitmq-c.spec"
+    install_from_local_repo rabbitmq-c
+    install_from_local_repo rabbitmq-c-devel
+}
+
+ensure_php() {
+    if php85_devel_installed; then
+        log "php85-devel already installed"
+        return 0
+    fi
+    build_php
 }
 
 build_php() {
-    log "Building PHP ${PHP_VERSION}"
+    log "Stage 4/5: PHP ${PHP_VERSION} (requires re2c >= 3, libzip-devel)"
+    ensure_re2c
+    ensure_libzip
+
     build_spec "${PROJECT_ROOT}/packaging/php85.spec"
 
     log "Installing PHP RPMs for extension builds"
+    refresh_local_repo
     for pkg in common cli devel fpm opcache mbstring intl xml curl gd zip bcmath \
                soap sockets pcntl mysqlnd pgsql process; do
-        tdnf install -y "${OUTPUT_DIR}/php85-${pkg}-"*.rpm 2>/dev/null || \
-            rpm -Uvh --nodeps "${OUTPUT_DIR}/php85-${pkg}-"*.rpm 2>/dev/null || true
+        tdnf install -y "php85-${pkg}" 2>/dev/null || true
     done
-    tdnf install -y "${OUTPUT_DIR}/php85-"[0-9]*.rpm 2>/dev/null || \
-        rpm -Uvh --nodeps "${OUTPUT_DIR}/php85-"[0-9]*.rpm 2>/dev/null || true
+    tdnf install -y php85 2>/dev/null || true
 
+    php85_devel_installed || { log "ERROR: php85-devel not installed"; exit 1; }
     detect_php_api
 }
 
 build_extensions() {
-    log "Building PECL extensions"
-    build_rabbitmq_c
+    log "Stage 5/5: PECL extensions (require php85-devel)"
+    ensure_re2c
+    ensure_libzip
+    ensure_php
+    ensure_rabbitmq_c
+
     local ext_specs=(
         igbinary
         redis
@@ -187,32 +270,45 @@ build_extensions() {
     done
 }
 
+run_stage() {
+    case "${1}" in
+        re2c) build_re2c ;;
+        libzip) ensure_re2c; build_libzip ;;
+        rabbitmq-c) build_rabbitmq_c ;;
+        php) build_php ;;
+        extensions) build_extensions ;;
+        *) echo "Unknown stage: ${1}" >&2; return 1 ;;
+    esac
+}
+
 main() {
     setup_rpmbuild
 
     case "${TARGET}" in
-        re2c)
-            build_re2c
-            ;;
-        libzip)
-            build_libzip
-            ;;
-        php)
-            build_re2c
-            build_libzip
-            build_php
-            ;;
-        extensions)
-            build_extensions
+        re2c) run_stage re2c ;;
+        libzip) run_stage libzip ;;
+        rabbitmq-c) run_stage rabbitmq-c ;;
+        php) run_stage php ;;
+        extensions) run_stage extensions ;;
+        deps)
+            run_stage re2c
+            run_stage libzip
+            run_stage rabbitmq-c
             ;;
         all)
-            build_re2c
-            build_libzip
-            build_php
-            build_extensions
+            for stage in "${BUILD_STAGES[@]}"; do
+                run_stage "${stage}"
+            done
             ;;
         *)
-            echo "Usage: $0 [re2c|libzip|php|extensions|all]" >&2
+            echo "Usage: $0 [re2c|libzip|rabbitmq-c|php|extensions|deps|all]" >&2
+            echo "  re2c         — bootstrap re2c >= 3.x" >&2
+            echo "  libzip       — re2c, then libzip" >&2
+            echo "  rabbitmq-c   — rabbitmq-c only" >&2
+            echo "  php          — re2c, libzip, then php85" >&2
+            echo "  extensions   — full chain through php85, then PECL" >&2
+            echo "  deps         — bootstrap packages only (re2c, libzip, rabbitmq-c)" >&2
+            echo "  all          — complete repository (default)" >&2
             exit 1
             ;;
     esac

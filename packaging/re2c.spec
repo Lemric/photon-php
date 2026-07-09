@@ -2,6 +2,7 @@
 # Photon OS 5.x ships re2c 1.x; this package satisfies PHP build requirements.
 
 %global re2c_ver 3.1
+%global debug_package %{nil}
 
 Name:           re2c
 Version:        %{re2c_ver}
@@ -17,6 +18,7 @@ BuildRequires:  glibc-devel
 BuildRequires:  linux-api-headers
 BuildRequires:  make
 BuildRequires:  cmake
+BuildRequires:  python3
 
 %description
 re2c is a lexer generator that produces very fast lexers from regular
@@ -26,7 +28,7 @@ expressions. PHP 8.5+ requires re2c >= 3.x for building from source.
 %autosetup -n re2c-%{version}
 
 %build
-%cmake -DCMAKE_BUILD_TYPE=Release -DRE2C_BUILD_RE2GO=OFF
+%cmake -DCMAKE_BUILD_TYPE=Release -DRE2C_BUILD_RE2GO=OFF -DRE2C_BUILD_RE2RUST=OFF -DRE2C_BUILD_TESTS=OFF
 %cmake_build
 
 %install
@@ -37,6 +39,7 @@ strip %{buildroot}%{_bindir}/re2c 2>/dev/null || true
 %license LICENSE
 %{_bindir}/re2c
 %{_datadir}/re2c
+%{_mandir}/man1/re2c.1*
 
 %changelog
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 3.1-1

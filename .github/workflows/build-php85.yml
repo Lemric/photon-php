@@ -62,7 +62,6 @@ jobs:
             bash -c "
               chmod +x scripts/*.sh && \
               scripts/install-build-deps.sh && \
-              scripts/build-rpm.sh re2c && \
               scripts/build-rpm.sh php
             "
 
