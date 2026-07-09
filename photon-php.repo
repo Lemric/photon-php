@@ -1,0 +1,11 @@
+[photon-php]
+name=Photon PHP 8.5
+baseurl=https://pkgs.photon.lemric.com/x86_64
+enabled=1
+gpgcheck=0
+
+[photon-php-aarch64]
+name=Photon PHP 8.5 (aarch64)
+baseurl=https://pkgs.photon.lemric.com/aarch64
+enabled=1
+gpgcheck=0
