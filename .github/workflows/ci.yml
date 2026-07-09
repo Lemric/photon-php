@@ -1,8 +1,5 @@
 name: CI
 
-# Single entry point: sequential RPM build (re2c → libzip → rabbitmq-c → php85 → PECL),
-# then install test, then publish to gh-pages on push to master.
-
 on:
   push:
     branches: [main, master]
@@ -27,12 +24,12 @@ env:
   PHOTON_VERSION: '5.0'
   REPO_BASEURL: https://pkgs.photon.lemric.com
   PUBLISH_BRANCH: gh-pages
-  CONTAINER_NAME: photon-php-builder
 
 jobs:
   build-rpms:
     name: '${{ matrix.arch }} — re2c → libzip → php → PECL'
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -53,10 +50,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Start Photon build container
+      - name: Build RPMs (re2c → libzip → rabbitmq-c → php85 → PECL)
         run: |
-          docker run -d --privileged \
-            --name "${CONTAINER_NAME}-${{ matrix.arch }}" \
+          docker run --privileged --rm \
             --platform ${{ matrix.platform }} \
             -v "${{ github.workspace }}:/build" \
             -w /build \
@@ -64,47 +60,9 @@ jobs:
             -e ARCH="${{ matrix.arch }}" \
             -e OUTPUT_DIR="/build/repo/${{ matrix.arch }}" \
             -e RPMBUILD_DIR="/build/.rpmbuild-${{ matrix.arch }}" \
+            -e REPO_BASEURL="${{ env.REPO_BASEURL }}" \
             photon:${{ env.PHOTON_VERSION }} \
-            sleep infinity
-
-      - name: Install build dependencies
-        run: |
-          docker exec "${CONTAINER_NAME}-${{ matrix.arch }}" \
-            bash -c 'chmod +x scripts/*.sh && scripts/install-build-deps.sh'
-
-      - name: '1/5 Build re2c'
-        run: |
-          docker exec "${CONTAINER_NAME}-${{ matrix.arch }}" \
-            scripts/build-rpm.sh re2c
-
-      - name: '2/5 Build libzip'
-        run: |
-          docker exec "${CONTAINER_NAME}-${{ matrix.arch }}" \
-            scripts/build-rpm.sh libzip
-
-      - name: '3/5 Build rabbitmq-c'
-        run: |
-          docker exec "${CONTAINER_NAME}-${{ matrix.arch }}" \
-            scripts/build-rpm.sh rabbitmq-c
-
-      - name: '4/5 Build PHP 8.5'
-        run: |
-          docker exec "${CONTAINER_NAME}-${{ matrix.arch }}" \
-            scripts/build-rpm.sh php
-
-      - name: '5/5 Build PECL extensions'
-        run: |
-          docker exec "${CONTAINER_NAME}-${{ matrix.arch }}" \
-            scripts/build-rpm.sh extensions
-
-      - name: Create repository metadata
-        run: |
-          docker exec "${CONTAINER_NAME}-${{ matrix.arch }}" \
-            bash -c 'tdnf install -y createrepo_c && ARCH=${{ matrix.arch }} REPO_BASEURL=${{ env.REPO_BASEURL }} scripts/build-repo.sh'
-
-      - name: Stop build container
-        if: always()
-        run: docker rm -f "${CONTAINER_NAME}-${{ matrix.arch }}" || true
+            bash -c 'chmod +x scripts/*.sh && scripts/ci-build.sh'
 
       - name: Upload RPM repository artifact
         uses: actions/upload-artifact@v4
@@ -117,6 +75,7 @@ jobs:
     name: Test install (${{ matrix.arch }})
     runs-on: ubuntu-latest
     needs: build-rpms
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
