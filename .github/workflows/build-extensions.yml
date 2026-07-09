@@ -1,17 +1,9 @@
-name: Build PECL Extensions
+# Deprecated — use .github/workflows/ci.yml instead.
+# Kept for manual runs only.
+
+name: Build PECL Extensions (manual)
 
 on:
-  push:
-    branches: [main, master]
-    paths:
-      - 'extensions/**'
-      - 'packaging/**'
-      - 'scripts/**'
-      - '.github/workflows/build-extensions.yml'
-  pull_request:
-    branches: [main, master]
-    paths:
-      - 'extensions/**'
   workflow_dispatch:
 
 env:
@@ -22,7 +14,6 @@ jobs:
   build-extensions:
     name: Build PECL RPMs (${{ matrix.arch }})
     runs-on: ubuntu-latest
-    needs: []
     strategy:
       fail-fast: false
       matrix:
@@ -34,14 +25,9 @@ jobs:
             platform: linux/arm64
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
 
       - name: Build PHP and extensions
         run: |
@@ -59,25 +45,3 @@ jobs:
               scripts/install-build-deps.sh && \
               scripts/build-rpm.sh all
             "
-
-      - name: Create repository metadata
-        run: |
-          docker run --privileged --rm \
-            --platform ${{ matrix.platform }} \
-            -v "${{ github.workspace }}:/build" \
-            -w /build \
-            -e ARCH="${{ matrix.arch }}" \
-            photon:${{ env.PHOTON_VERSION }} \
-            bash -c "
-              tdnf install -y createrepo_c && \
-              ARCH=${{ matrix.arch }} scripts/build-repo.sh
-            "
-
-      - name: Upload extension RPM artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: php85-extensions-${{ matrix.arch }}
-          path: |
-            repo/${{ matrix.arch }}/php85-pecl-*.rpm
-            repo/${{ matrix.arch }}/repodata/
-          retention-days: 30

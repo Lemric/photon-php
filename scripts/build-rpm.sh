@@ -173,15 +173,12 @@ ensure_re2c() {
         log "re2c $(re2c --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1) already available"
         return 0
     fi
+    if [ -n "$(binary_rpms_in_output "re2c-*.${ARCH}.rpm")" ]; then
+        log "Installing pre-built re2c from ${OUTPUT_DIR}"
+        install_from_local_repo re2c
+        re2c_version_ok && return 0
+    fi
     build_re2c
-}
-
-build_re2c() {
-    log "Stage 1/5: re2c >= 3.x (PHP 8.5 build dependency)"
-    build_spec "${PROJECT_ROOT}/packaging/re2c.spec"
-    install_from_local_repo re2c
-    re2c_version_ok || { log "ERROR: re2c >= 3 not available after install"; exit 1; }
-    re2c --version
 }
 
 ensure_libzip() {
@@ -189,14 +186,13 @@ ensure_libzip() {
         log "libzip-devel already installed"
         return 0
     fi
+    if [ -n "$(binary_rpms_in_output "libzip-*.${ARCH}.rpm")" ]; then
+        log "Installing pre-built libzip from ${OUTPUT_DIR}"
+        install_from_local_repo libzip
+        install_from_local_repo libzip-devel
+        libzip_installed && return 0
+    fi
     build_libzip
-}
-
-build_libzip() {
-    log "Stage 2/5: libzip (php85-zip dependency)"
-    build_spec "${PROJECT_ROOT}/packaging/libzip.spec"
-    install_from_local_repo libzip
-    install_from_local_repo libzip-devel
 }
 
 ensure_rabbitmq_c() {
@@ -208,14 +204,13 @@ ensure_rabbitmq_c() {
         tdnf install -y rabbitmq-c-devel
         return 0
     fi
+    if [ -n "$(binary_rpms_in_output "rabbitmq-c-*.${ARCH}.rpm")" ]; then
+        log "Installing pre-built rabbitmq-c from ${OUTPUT_DIR}"
+        install_from_local_repo rabbitmq-c
+        install_from_local_repo rabbitmq-c-devel
+        rabbitmq_c_installed && return 0
+    fi
     build_rabbitmq_c
-}
-
-build_rabbitmq_c() {
-    log "Stage 3/5: rabbitmq-c (php85-pecl-amqp dependency)"
-    build_spec "${PROJECT_ROOT}/packaging/rabbitmq-c.spec"
-    install_from_local_repo rabbitmq-c
-    install_from_local_repo rabbitmq-c-devel
 }
 
 ensure_php() {
@@ -223,7 +218,38 @@ ensure_php() {
         log "php85-devel already installed"
         return 0
     fi
+    if [ -n "$(binary_rpms_in_output "php85-devel-*.${ARCH}.rpm")" ]; then
+        log "Installing pre-built php85 from ${OUTPUT_DIR}"
+        refresh_local_repo
+        for pkg in common cli devel fpm opcache mbstring intl xml curl gd zip bcmath \
+                   soap sockets pcntl mysqlnd pgsql process; do
+            tdnf install -y "php85-${pkg}" 2>/dev/null || true
+        done
+        php85_devel_installed && return 0
+    fi
     build_php
+}
+
+build_re2c() {
+    log "Stage 1/5: re2c >= 3.x (PHP 8.5 build dependency)"
+    build_spec "${PROJECT_ROOT}/packaging/re2c.spec"
+    install_from_local_repo re2c
+    re2c_version_ok || { log "ERROR: re2c >= 3 not available after install"; exit 1; }
+    re2c --version
+}
+
+build_libzip() {
+    log "Stage 2/5: libzip (php85-zip dependency)"
+    build_spec "${PROJECT_ROOT}/packaging/libzip.spec"
+    install_from_local_repo libzip
+    install_from_local_repo libzip-devel
+}
+
+build_rabbitmq_c() {
+    log "Stage 3/5: rabbitmq-c (php85-pecl-amqp dependency)"
+    build_spec "${PROJECT_ROOT}/packaging/rabbitmq-c.spec"
+    install_from_local_repo rabbitmq-c
+    install_from_local_repo rabbitmq-c-devel
 }
 
 build_php() {

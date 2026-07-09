@@ -1,0 +1,234 @@
+name: CI
+
+# Single entry point: sequential RPM build (re2c → libzip → rabbitmq-c → php85 → PECL),
+# then install test, then publish to gh-pages on push to master.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      php_version:
+        description: 'PHP version to build'
+        required: false
+        default: '8.5.8'
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  PHP_VERSION: ${{ github.event.inputs.php_version || '8.5.8' }}
+  PHOTON_VERSION: '5.0'
+  REPO_BASEURL: https://pkgs.photon.lemric.com
+  PUBLISH_BRANCH: gh-pages
+  CONTAINER_NAME: photon-php-builder
+
+jobs:
+  build-rpms:
+    name: '${{ matrix.arch }} — re2c → libzip → php → PECL'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+        include:
+          - arch: x86_64
+            platform: linux/amd64
+          - arch: aarch64
+            platform: linux/arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Start Photon build container
+        run: |
+          docker run -d --privileged \
+            --name "${CONTAINER_NAME}-${{ matrix.arch }}" \
+            --platform ${{ matrix.platform }} \
+            -v "${{ github.workspace }}:/build" \
+            -w /build \
+            -e PHP_VERSION="${{ env.PHP_VERSION }}" \
+            -e ARCH="${{ matrix.arch }}" \
+            -e OUTPUT_DIR="/build/repo/${{ matrix.arch }}" \
+            -e RPMBUILD_DIR="/build/.rpmbuild-${{ matrix.arch }}" \
+            photon:${{ env.PHOTON_VERSION }} \
+            sleep infinity
+
+      - name: Install build dependencies
+        run: |
+          docker exec "${CONTAINER_NAME}-${{ matrix.arch }}" \
+            bash -c 'chmod +x scripts/*.sh && scripts/install-build-deps.sh'
+
+      - name: '1/5 Build re2c'
+        run: |
+          docker exec "${CONTAINER_NAME}-${{ matrix.arch }}" \
+            scripts/build-rpm.sh re2c
+
+      - name: '2/5 Build libzip'
+        run: |
+          docker exec "${CONTAINER_NAME}-${{ matrix.arch }}" \
+            scripts/build-rpm.sh libzip
+
+      - name: '3/5 Build rabbitmq-c'
+        run: |
+          docker exec "${CONTAINER_NAME}-${{ matrix.arch }}" \
+            scripts/build-rpm.sh rabbitmq-c
+
+      - name: '4/5 Build PHP 8.5'
+        run: |
+          docker exec "${CONTAINER_NAME}-${{ matrix.arch }}" \
+            scripts/build-rpm.sh php
+
+      - name: '5/5 Build PECL extensions'
+        run: |
+          docker exec "${CONTAINER_NAME}-${{ matrix.arch }}" \
+            scripts/build-rpm.sh extensions
+
+      - name: Create repository metadata
+        run: |
+          docker exec "${CONTAINER_NAME}-${{ matrix.arch }}" \
+            bash -c 'tdnf install -y createrepo_c && ARCH=${{ matrix.arch }} REPO_BASEURL=${{ env.REPO_BASEURL }} scripts/build-repo.sh'
+
+      - name: Stop build container
+        if: always()
+        run: docker rm -f "${CONTAINER_NAME}-${{ matrix.arch }}" || true
+
+      - name: Upload RPM repository artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo-${{ matrix.arch }}
+          path: repo/${{ matrix.arch }}/
+          retention-days: 7
+
+  test-install:
+    name: Test install (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    needs: build-rpms
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+        include:
+          - arch: x86_64
+            platform: linux/amd64
+          - arch: aarch64
+            platform: linux/arm64
+
+    steps:
+      - name: Download repository artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: repo-${{ matrix.arch }}
+          path: repo/${{ matrix.arch }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Test installation and functionality
+        run: |
+          docker run --privileged --rm \
+            --platform ${{ matrix.platform }} \
+            -v "${{ github.workspace }}/repo/${{ matrix.arch }}:/repo:ro" \
+            photon:${{ env.PHOTON_VERSION }} \
+            bash -c "
+              set -euo pipefail
+
+              cat > /etc/yum.repos.d/photon-php.repo << 'EOF'
+              [photon-php]
+              name=Photon PHP 8.5
+              baseurl=file:///repo
+              enabled=1
+              gpgcheck=0
+              EOF
+              tdnf makecache
+
+              tdnf install -y \
+                php85 php85-cli php85-fpm php85-common php85-opcache \
+                php85-mbstring php85-intl php85-xml php85-curl php85-gd \
+                php85-zip php85-bcmath php85-mysqlnd php85-pgsql \
+                php85-pecl-redis php85-pecl-igbinary
+
+              php -v | grep -E 'PHP 8\.5\.[0-9]+'
+              php -m | grep -E '^(mbstring|intl|curl|gd|zip|bcmath|mysqli|pdo_mysql|pgsql|pdo_pgsql|Zend OPcache)$'
+              php -m | grep -E '^(redis|igbinary)$'
+              php-fpm -t
+              php -r 'echo extension_loaded(\"Zend OPcache\") ? \"ok\" : \"fail\";' | grep -q ok
+              id php-fpm
+              echo 'All tests passed'
+            "
+
+  publish:
+    name: Publish to gh-pages
+    runs-on: ubuntu-latest
+    needs: [build-rpms, test-install]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+
+    steps:
+      - name: Checkout pages templates
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            pages
+          sparse-checkout-cone-mode: false
+
+      - name: Download repository artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Assemble package repository
+        run: |
+          set -euo pipefail
+          mkdir -p publish/x86_64 publish/aarch64
+
+          cp -a artifacts/repo-x86_64/. publish/x86_64/
+          cp -a artifacts/repo-aarch64/. publish/aarch64/
+
+          test -d publish/x86_64/repodata
+          test -d publish/aarch64/repodata
+          ls publish/x86_64/*.rpm >/dev/null
+          ls publish/aarch64/*.rpm >/dev/null
+
+          cp pages/CNAME publish/CNAME
+          cp pages/.nojekyll publish/.nojekyll
+          cp pages/photon-php.repo publish/photon-php.repo
+          cp pages/index.html publish/index.html
+          cp pages/BRANCH-README.md publish/README.md
+          sed -i "s/@PHP_VERSION@/${{ env.PHP_VERSION }}/g" publish/index.html
+          sed -i "s|@GITHUB_REPOSITORY@|${{ github.repository }}|g" publish/index.html
+
+          cat > publish/repodata.json << EOF
+          {
+            "name": "photon-php",
+            "baseurl": "${{ env.REPO_BASEURL }}",
+            "php_version": "${{ env.PHP_VERSION }}",
+            "architectures": ["x86_64", "aarch64"],
+            "updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "${{ github.sha }}"
+          }
+          EOF
+
+      - name: Push to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: ${{ env.PUBLISH_BRANCH }}
+          publish_dir: ./publish
+          cname: pkgs.photon.lemric.com
+          force_orphan: true
+          commit_message: 'publish: PHP ${{ env.PHP_VERSION }} (${{ github.sha }})'
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com

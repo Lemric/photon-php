@@ -247,7 +247,7 @@ The RPM repository is published to the dedicated **`gh-pages`** branch and serve
 | `main` | Source code, specs, CI workflows |
 | `gh-pages` | RPM packages only (`x86_64/`, `aarch64/`, repo metadata) |
 
-The `gh-pages` branch is updated automatically on every push to `main` by the `pages.yml` workflow. Do not commit source code to `gh-pages`.
+The `gh-pages` branch is updated automatically on every push to `main` by the `ci.yml` workflow. Do not commit source code to `gh-pages`.
 
 ### GitHub repository settings
 
@@ -269,11 +269,11 @@ The `gh-pages` branch is updated automatically on every push to `main` by the `p
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `pages.yml` | Push to main, release | Build RPMs and publish to `gh-pages` branch |
-| `build-php85.yml` | Push to main | Build PHP core RPMs (CI validation) |
-| `build-extensions.yml` | Push to extensions/ | Build PECL extension RPMs |
-| `test-install.yml` | Push/PR | Install RPMs and run functional tests |
+| `ci.yml` | Push/PR to main | **Single pipeline:** re2c → libzip → rabbitmq-c → php85 → PECL → test → publish |
+| `build-docker.yml` | Push to `docker/8.5/photon/**` | Build container images (docker-library/php layout) |
 | `release.yml` | Tag `php-8.5.*` | Build, package, and publish GitHub Release |
+
+Legacy workflows (`build-php85.yml`, `build-extensions.yml`, `pages.yml`, `test-install.yml`) are **manual only** — use `ci.yml` instead.
 
 ### Creating a release
 

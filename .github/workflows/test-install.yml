@@ -1,10 +1,9 @@
-name: Test RPM Installation
+# Deprecated — install tests run from ci.yml after build-rpms completes.
+# Kept for manual runs only.
+
+name: Test RPM Installation (manual)
 
 on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
   workflow_dispatch:
 
 env:
@@ -26,11 +25,8 @@ jobs:
             platform: linux/arm64
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
 
       - name: Build RPMs
         run: |
@@ -59,8 +55,6 @@ jobs:
             photon:${{ env.PHOTON_VERSION }} \
             bash -c "
               set -euo pipefail
-
-              echo '==> Configuring repository'
               cat > /etc/yum.repos.d/photon-php.repo << 'EOF'
               [photon-php]
               name=Photon PHP 8.5
@@ -69,47 +63,6 @@ jobs:
               gpgcheck=0
               EOF
               tdnf makecache
-
-              echo '==> Installing PHP packages'
-              tdnf install -y \
-                php85 \
-                php85-cli \
-                php85-fpm \
-                php85-common \
-                php85-opcache \
-                php85-mbstring \
-                php85-intl \
-                php85-xml \
-                php85-curl \
-                php85-gd \
-                php85-zip \
-                php85-bcmath \
-                php85-mysqlnd \
-                php85-pgsql \
-                php85-pecl-redis \
-                php85-pecl-igbinary
-
-              echo '==> Test: php -v'
-              php -v | grep -E 'PHP 8\.5\.[0-9]+'
-
-              echo '==> Test: php -m (core extensions)'
-              php -m | grep -E '^(mbstring|intl|curl|gd|zip|bcmath|mysqli|pdo_mysql|pgsql|pdo_pgsql|Zend OPcache)$'
-
-              echo '==> Test: PECL extensions'
-              php -m | grep -E '^(redis|igbinary)$'
-
-              echo '==> Test: php-fpm configuration'
-              php-fpm -t
-
-              echo '==> Test: security settings'
-              php -r 'echo ini_get(\"expose_php\");' | grep -q '^0$' || \
-                php -i | grep -q 'expose_php => Off'
-
-              echo '==> Test: OPcache enabled'
-              php -r 'echo extension_loaded(\"Zend OPcache\") ? \"ok\" : \"fail\";' | grep -q ok
-
-              echo '==> Test: php-fpm user exists'
-              id php-fpm
-
-              echo '==> All tests passed'
+              tdnf install -y php85 php85-cli php85-fpm php85-common php85-opcache
+              php -v
             "

@@ -1,8 +1,9 @@
-name: Publish package repository
+# Deprecated — publish runs automatically from ci.yml on push to master/main.
+# Kept for manual republish only.
+
+name: Publish package repository (manual)
 
 on:
-  push:
-    branches: [main, master]
   release:
     types: [published]
   workflow_dispatch:
@@ -40,14 +41,9 @@ jobs:
             platform: linux/arm64
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
 
       - name: Build all RPMs
         run: |
@@ -63,25 +59,12 @@ jobs:
             bash -c "
               chmod +x scripts/*.sh && \
               scripts/install-build-deps.sh && \
-              scripts/build-rpm.sh all
-            "
-
-      - name: Create repository metadata
-        run: |
-          docker run --privileged --rm \
-            --platform ${{ matrix.platform }} \
-            -v "${{ github.workspace }}:/build" \
-            -w /build \
-            -e ARCH="${{ matrix.arch }}" \
-            -e REPO_BASEURL="${{ env.REPO_BASEURL }}" \
-            photon:${{ env.PHOTON_VERSION }} \
-            bash -c "
+              scripts/build-rpm.sh all && \
               tdnf install -y createrepo_c && \
               ARCH=${{ matrix.arch }} REPO_BASEURL=${{ env.REPO_BASEURL }} scripts/build-repo.sh
             "
 
-      - name: Upload architecture artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: repo-${{ matrix.arch }}
           path: repo/${{ matrix.arch }}/
@@ -93,15 +76,13 @@ jobs:
     needs: build
 
     steps:
-      - name: Checkout source (templates only)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           sparse-checkout: |
             pages
           sparse-checkout-cone-mode: false
 
-      - name: Download architecture artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
@@ -109,15 +90,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p publish/x86_64 publish/aarch64
-
           cp -a artifacts/repo-x86_64/. publish/x86_64/
           cp -a artifacts/repo-aarch64/. publish/aarch64/
-
-          test -d publish/x86_64/repodata
-          test -d publish/aarch64/repodata
-          ls publish/x86_64/*.rpm >/dev/null
-          ls publish/aarch64/*.rpm >/dev/null
-
           cp pages/CNAME publish/CNAME
           cp pages/.nojekyll publish/.nojekyll
           cp pages/photon-php.repo publish/photon-php.repo
@@ -126,22 +100,7 @@ jobs:
           sed -i "s/@PHP_VERSION@/${{ env.PHP_VERSION }}/g" publish/index.html
           sed -i "s|@GITHUB_REPOSITORY@|${{ github.repository }}|g" publish/index.html
 
-          cat > publish/repodata.json << EOF
-          {
-            "name": "photon-php",
-            "baseurl": "${{ env.REPO_BASEURL }}",
-            "php_version": "${{ env.PHP_VERSION }}",
-            "architectures": ["x86_64", "aarch64"],
-            "updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "commit": "${{ github.sha }}"
-          }
-          EOF
-
-          echo "Package repository contents:"
-          find publish -maxdepth 2 -type d
-
-      - name: Push to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v4
+      - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: ${{ env.PUBLISH_BRANCH }}
