@@ -300,6 +300,7 @@ export LDFLAGS="%{php85_ldflags}"
     --enable-sysvsem=shared \
     --enable-sysvshm=shared \
     --enable-pdo=shared \
+    --without-pdo-sqlite \
     --with-openssl \
     --with-zlib \
     --with-curl=shared \
@@ -411,6 +412,8 @@ sapi/cli/php -n -m | head -20
 %doc README.md
 
 %changelog
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-7
+- Disable pdo_sqlite (pdo is shared; no sqlite subpackage in repo)
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-6
 - Build all modular extensions as shared (.so); verify modules in %%install
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-5
