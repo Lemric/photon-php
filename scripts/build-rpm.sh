@@ -16,8 +16,47 @@ OUTPUT_DIR="${OUTPUT_DIR:-${PROJECT_ROOT}/repo/${ARCH}}"
 
 MACROS_FILE="${PROJECT_ROOT}/packaging/macros.php85"
 RPM_MACROS=(--macros="${MACROS_FILE}")
+RPM_TOPDIR_DEFINE=(--define "_topdir ${RPMBUILD_DIR}")
+RPM_SOURCEDIR_DEFINE=(--define "_sourcedir ${RPMBUILD_DIR}/SOURCES")
 
 log() { echo "[build-rpm] $*"; }
+
+fetch_remote_sources() {
+    local spec_file="$1"
+    local spec_name
+    spec_name="$(basename "${spec_file}")"
+    local sourcedir="${RPMBUILD_DIR}/SOURCES"
+
+    mkdir -p "${sourcedir}"
+
+    if command -v spectool >/dev/null 2>&1; then
+        log "Fetching sources for ${spec_name} via spectool"
+        spectool -g -R \
+            "${RPM_MACROS[@]}" \
+            "${RPM_TOPDIR_DEFINE[@]}" \
+            "${RPM_SOURCEDIR_DEFINE[@]}" \
+            -C "${sourcedir}" \
+            "${RPMBUILD_DIR}/SPECS/${spec_name}"
+        return 0
+    fi
+
+    local version name
+    version="$(grep -E '^Version[[:space:]]*:' "${spec_file}" | awk '{print $2}' | head -1)"
+    name="$(grep -E '^Name[[:space:]]*:' "${spec_file}" | awk '{print $2}' | head -1)"
+
+    log "Fetching sources for ${spec_name} via curl"
+    while IFS= read -r line; do
+        [[ "${line}" =~ ^Source[0-9]+[[:space:]]*:[[:space:]]*(https?://.+) ]] || continue
+        local url="${BASH_REMATCH[1]}"
+        url="${url//%\{version\}/${version}}"
+        url="${url//%\{name\}/${name}}"
+        local dest="${sourcedir}/$(basename "${url}")"
+        if [ ! -f "${dest}" ]; then
+            log "Downloading ${url}"
+            curl -fSL -o "${dest}" "${url}"
+        fi
+    done < "${spec_file}"
+}
 
 setup_rpmbuild() {
     log "Setting up rpmbuild tree at ${RPMBUILD_DIR}"
@@ -53,10 +92,12 @@ build_spec() {
         cp -f "${PROJECT_ROOT}/extensions/macros.inc" "${RPMBUILD_DIR}/SPECS/"
     fi
 
+    fetch_remote_sources "${spec_file}"
+
     rpmbuild -ba \
         "${RPM_MACROS[@]}" \
-        --define "_topdir ${RPMBUILD_DIR}" \
-        --define "_sourcedir ${RPMBUILD_DIR}/SOURCES" \
+        "${RPM_TOPDIR_DEFINE[@]}" \
+        "${RPM_SOURCEDIR_DEFINE[@]}" \
         --define "dist .${DIST}" \
         --target "${ARCH}" \
         "${RPMBUILD_DIR}/SPECS/${spec_name}"
