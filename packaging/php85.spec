@@ -367,7 +367,15 @@ fi
 
 find %{buildroot}%{php85_moddir} -name '*.so' -exec strip --strip-unneeded {} \;
 
-rm -rf %{buildroot}%{_libdir}/php
+# PHP installs man pages under $prefix/php/man, not %{_mandir}.
+if [ -d %{buildroot}/usr/php/man ]; then
+    mkdir -p %{buildroot}%{_mandir}
+    cp -a %{buildroot}/usr/php/man/. %{buildroot}%{_mandir}/
+fi
+rm -rf %{buildroot}/usr/php
+
+# Keep %{_libdir}/php/build for phpize; drop only the runtime modules tree.
+rm -rf %{buildroot}%{_libdir}/php/modules 2>/dev/null || true
 rm -rf %{buildroot}%{_libdir}/php85
 rm -rf %{buildroot}%{_datadir}/php
 rm -rf %{buildroot}%{_localstatedir}/log/php-fpm.log 2>/dev/null || true
@@ -382,6 +390,8 @@ sapi/cli/php -n -m | head -20
 %doc README.md
 
 %changelog
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-3
+- Relocate man pages from /usr/php/man to %{_mandir}; keep php/build for phpize
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-2
 - Drop -flto=auto (breaks OPcache JIT global register variables on GCC 14)
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-1

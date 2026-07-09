@@ -20,5 +20,6 @@ Includes phpize, php-config, headers, and the embedded SAPI library.
 %{_bindir}/php-config
 %{_includedir}/php85
 %{_libdir}/libphp85.so*
+%{_libdir}/php/build
 %{_mandir}/man1/phpize.1*
 %{_mandir}/man1/php-config.1*
