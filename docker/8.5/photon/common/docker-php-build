@@ -1,0 +1,101 @@
+#!/bin/sh
+# Compile PHP from source — docker-library/php Alpine layout for Photon OS 5.x
+set -eux
+
+photon_remove_build_deps() {
+	rpm -qa --queryformat '%{NAME}\n' | sort > /tmp/rpm-after.txt
+	comm -13 /tmp/rpm-before.txt /tmp/rpm-after.txt \
+		| grep -Ev '^(filesystem|glibc|photon|openssl|libcurl|oniguruma|readline|sqlite|libxml2|zlib|libsodium|libargon2)' \
+		| xargs -r tdnf remove -y || true
+	rm -f /tmp/rpm-before.txt /tmp/rpm-after.txt
+}
+
+case "${1:-}" in
+	compile)
+		rpm -qa --queryformat '%{NAME}\n' | sort > /tmp/rpm-before.txt
+		tdnf install -y \
+			openssl-devel \
+			curl-devel \
+			oniguruma-devel \
+			readline-devel \
+			sqlite-devel \
+			libxml2-devel \
+			zlib-devel \
+			libsodium-devel \
+			libargon2-devel \
+			linux-api-headers \
+			glibc-devel
+
+		export \
+			CFLAGS="${CFLAGS:-$PHP_CFLAGS}" \
+			CPPFLAGS="${CPPFLAGS:-$PHP_CPPFLAGS}" \
+			LDFLAGS="${LDFLAGS:-$PHP_LDFLAGS}" \
+			PHP_BUILD_PROVIDER='https://github.com/docker-library/php' \
+			PHP_UNAME='Linux - Docker - Photon OS'
+
+		docker-php-source extract
+		cd /usr/src/php
+
+		gnuArch="$(gcc -dumpmachine)"
+		libdir='lib'
+		if [ -d /usr/lib64 ]; then
+			libdir='lib64'
+		fi
+		if [ ! -d /usr/include/curl ] && [ -d "/usr/include/${libdir}/curl" ]; then
+			ln -sT "/usr/include/${libdir}/curl" /usr/local/include/curl
+		fi
+
+		extraConfigure="${PHP_EXTRA_CONFIGURE_ARGS:-}"
+		if pkg-config --exists libargon2 2>/dev/null; then
+			extraConfigure="$extraConfigure --with-password-argon2"
+		fi
+		if pkg-config --exists libsodium 2>/dev/null; then
+			extraConfigure="$extraConfigure --with-sodium=shared"
+		fi
+
+		test "$PHP_INI_DIR" != "${PHP_INI_DIR%/php}"
+		./configure \
+			--build="$gnuArch" \
+			--sysconfdir="${PHP_INI_DIR%/php}" \
+			--with-config-file-path="$PHP_INI_DIR" \
+			--with-config-file-scan-dir="$PHP_INI_DIR/conf.d" \
+			--enable-option-checking=fatal \
+			--with-mhash \
+			--with-pic \
+			--enable-mbstring \
+			--enable-mysqlnd \
+			$extraConfigure \
+			--with-pdo-sqlite=/usr \
+			--with-sqlite3=/usr \
+			--with-curl \
+			--with-iconv \
+			--with-openssl \
+			--with-readline \
+			--with-zlib \
+			--with-pear \
+			--with-libdir="$libdir"
+
+		make -j "$(nproc)"
+		find -type f -name '*.a' -delete
+		make install
+		find \
+			/usr/local \
+			-type f \
+			-perm '/0111' \
+			-exec sh -euxc 'strip --strip-all "$@" || :' -- '{}' +
+		make clean
+		cp -v php.ini-* "$PHP_INI_DIR/"
+		cd /
+		docker-php-source delete
+		photon_remove_build_deps
+		tdnf clean all
+		pecl update-channels
+		rm -rf /tmp/pear ~/.pearrc
+		php --version
+		;;
+
+	*)
+		echo "usage: $0 compile" >&2
+		exit 1
+		;;
+esac

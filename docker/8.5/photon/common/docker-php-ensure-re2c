@@ -1,0 +1,35 @@
+#!/bin/sh
+# Photon OS 5.x ships re2c 1.x; PHP 8.5+ requires re2c >= 3.x.
+set -eux
+
+re2c_ver="$(re2c --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1 || echo 0)"
+if awk "BEGIN {exit !($re2c_ver >= 3.0)}"; then
+	echo "re2c ${re2c_ver} is sufficient"
+	exit 0
+fi
+
+tdnf install -y \
+	cmake \
+	gcc \
+	libstdc++-devel \
+	glibc-devel \
+	linux-api-headers \
+	make \
+	python3
+
+cd /tmp
+curl -fsSL -o re2c.tar.xz https://github.com/skvadrik/re2c/releases/download/3.1/re2c-3.1.tar.xz
+tar -xf re2c.tar.xz
+cd re2c-3.1
+cmake \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DRE2C_BUILD_RE2GO=OFF \
+	-DRE2C_BUILD_TESTS=OFF \
+	.
+make -j"$(nproc)"
+make install
+rm -rf /tmp/re2c-3.1 /tmp/re2c.tar.xz
+
+tdnf remove -y cmake python3 || true
+tdnf clean all
+re2c --version

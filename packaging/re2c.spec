@@ -14,6 +14,7 @@ Source0:        https://github.com/skvadrik/re2c/releases/download/%{version}/re
 BuildRequires:  gcc
 BuildRequires:  libstdc++-devel
 BuildRequires:  glibc-devel
+BuildRequires:  linux-api-headers
 BuildRequires:  make
 BuildRequires:  cmake
 
@@ -33,7 +34,7 @@ expressions. PHP 8.5+ requires re2c >= 3.x for building from source.
 strip %{buildroot}%{_bindir}/re2c 2>/dev/null || true
 
 %files
-%license COPYING
+%license LICENSE
 %{_bindir}/re2c
 %{_datadir}/re2c
 

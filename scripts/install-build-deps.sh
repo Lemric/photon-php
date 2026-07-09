@@ -1,5 +1,10 @@
 #!/bin/bash
-# install-build-deps.sh — Install RPM build dependencies on VMware Photon OS 5.x
+# install-build-deps.sh — RPM-only build dependencies for VMware Photon OS 5.x
+#
+# This script is intentionally heavy (~500 MB): it installs rpm-build, createrepo,
+# and headers for every PHP subpackage and PECL extension. For fast container
+# images that compile PHP from source (docker-library/php style), use
+# docker/8.5/photon/ instead — no RPM toolchain required.
 set -euo pipefail
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -22,6 +27,7 @@ install_pkgs \
     gcc \
     libstdc++-devel \
     glibc-devel \
+    linux-api-headers \
     make \
     cmake \
     autoconf \
