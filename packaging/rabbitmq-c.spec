@@ -27,6 +27,7 @@ such as RabbitMQ. Required by the php85-pecl-amqp extension.
 
 %build
 %cmake -DCMAKE_BUILD_TYPE=Release \
+       -DCMAKE_INSTALL_LIBDIR=%{_lib} \
        -DBUILD_API_DOCS=OFF \
        -DBUILD_EXAMPLES=OFF \
        -DBUILD_TESTS=OFF \

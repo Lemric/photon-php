@@ -28,12 +28,14 @@ Required by the php85-zip extension on Photon OS.
 
 %build
 %cmake -DCMAKE_BUILD_TYPE=Release \
+       -DCMAKE_INSTALL_LIBDIR=%{_lib} \
        -DENABLE_GNUTLS=OFF \
        -DENABLE_MBEDTLS=OFF \
        -DENABLE_OPENSSL=ON \
        -DBUILD_DOC=OFF \
        -DBUILD_EXAMPLES=OFF \
        -DBUILD_REGRESS=OFF \
+       -DBUILD_OSSFUZZ=OFF \
        -DBUILD_TOOLS=ON
 %cmake_build
 
@@ -61,6 +63,8 @@ Header files and pkg-config metadata for building against libzip.
 %{_includedir}/zipconf.h
 
 %changelog
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 1.11.4-2
+- Install libraries to %{_libdir} (fix lib64 vs lib mismatch on x86_64)
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 1.11.4-1
 - Bump to libzip 1.11.4 (.tar.gz release tarball)
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 1.11.3-1
