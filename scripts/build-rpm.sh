@@ -75,6 +75,17 @@ php85_devel_installed() {
     rpm -q php85-devel >/dev/null 2>&1
 }
 
+install_php85_stack() {
+    local sub pkgs=(
+        common cli fpm devel opcache mbstring intl xml curl gd zip bcmath
+        soap sockets pcntl mysqlnd pgsql process
+    )
+    for sub in "${pkgs[@]}"; do
+        install_from_local_repo "php85-${sub}"
+    done
+    install_from_local_repo php85
+}
+
 fetch_remote_sources() {
     local spec_file="$1"
     local spec_name
@@ -219,11 +230,7 @@ ensure_php() {
     fi
     if [ -n "$(binary_rpms_in_output "php85-devel-*.${ARCH}.rpm")" ]; then
         log "Installing pre-built php85 from ${OUTPUT_DIR}"
-        refresh_local_repo
-        for pkg in common cli devel fpm opcache mbstring intl xml curl gd zip bcmath \
-                   soap sockets pcntl mysqlnd pgsql process; do
-            tdnf install -y "php85-${pkg}" 2>/dev/null || true
-        done
+        install_php85_stack
         php85_devel_installed && return 0
     fi
     build_php
@@ -259,12 +266,7 @@ build_php() {
     build_spec "${PROJECT_ROOT}/packaging/php85.spec"
 
     log "Installing PHP RPMs for extension builds"
-    refresh_local_repo
-    for pkg in common cli devel fpm opcache mbstring intl xml curl gd zip bcmath \
-               soap sockets pcntl mysqlnd pgsql process; do
-        tdnf install -y "php85-${pkg}" 2>/dev/null || true
-    done
-    tdnf install -y php85 2>/dev/null || true
+    install_php85_stack
 
     php85_devel_installed || { log "ERROR: php85-devel not installed"; exit 1; }
     detect_php_api

@@ -41,6 +41,7 @@ such as RabbitMQ. Required by the php85-pecl-amqp extension.
 %cmake_install
 find %{buildroot} -name '*.so*' -exec strip --strip-unneeded {} \; 2>/dev/null || true
 rm -f %{buildroot}%{_libdir}/librabbitmq.a
+rm -rf %{buildroot}%{_libdir}/cmake
 
 %files
 %license LICENSE
@@ -60,6 +61,8 @@ Header files and pkg-config metadata for building against rabbitmq-c.
 %{_includedir}/rabbitmq-c/
 
 %changelog
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 0.14.0-3
+- Drop unused cmake config files from install root
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 0.14.0-2
 - Split devel subpackage; disable debuginfo and unit tests
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 0.14.0-1
