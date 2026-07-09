@@ -90,18 +90,21 @@ fetch_remote_sources() {
         return 1
     fi
 
-    urls="$(rpmspec -q -P \
+    # rpmspec -P expands all macros; extract http(s) Source lines only.
+    urls="$(rpmspec -P \
         --define "_topdir ${RPMBUILD_DIR}" \
         --define "dist .${DIST}" \
-        "${spec_path}" 2>/dev/null || true)"
+        "${spec_path}" 2>/dev/null \
+        | grep -E '^Source[0-9]+:[[:space:]]*https?://' \
+        | sed -E 's/^Source[0-9]+:[[:space:]]*//' || true)"
 
     if [ -z "${urls}" ]; then
-        log "ERROR: failed to expand Source URLs from ${spec_name}" >&2
+        log "ERROR: no remote Source URLs found in ${spec_name}" >&2
         return 1
     fi
 
     while IFS= read -r url; do
-        [[ "${url}" =~ ^https?:// ]] || continue
+        [ -n "${url}" ] || continue
         local dest="${sourcedir}/$(basename "${url}")"
         if [ -f "${dest}" ]; then
             log "Source already present: $(basename "${dest}")"
