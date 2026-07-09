@@ -15,7 +15,8 @@ RPMBUILD_DIR="${RPMBUILD_DIR:-${PROJECT_ROOT}/.rpmbuild}"
 OUTPUT_DIR="${OUTPUT_DIR:-${PROJECT_ROOT}/repo/${ARCH}}"
 
 MACROS_FILE="${PROJECT_ROOT}/packaging/macros.php85"
-RPM_MACROS=(--macros="${MACROS_FILE}")
+URLHELPER_MACROS="${PROJECT_ROOT}/packaging/macros.urlhelper"
+RPM_MACROS=(--macros="${MACROS_FILE}" --macros="${URLHELPER_MACROS}")
 RPM_TOPDIR_DEFINE=(--define "_topdir ${RPMBUILD_DIR}")
 RPM_SOURCEDIR_DEFINE=(--define "_sourcedir ${RPMBUILD_DIR}/SOURCES")
 
@@ -25,37 +26,43 @@ fetch_remote_sources() {
     local spec_file="$1"
     local spec_name
     spec_name="$(basename "${spec_file}")"
+    local spec_path="${RPMBUILD_DIR}/SPECS/${spec_name}"
     local sourcedir="${RPMBUILD_DIR}/SOURCES"
+    local version="" name=""
 
     mkdir -p "${sourcedir}"
 
-    if command -v spectool >/dev/null 2>&1; then
-        log "Fetching sources for ${spec_name} via spectool"
-        spectool -g -R \
+    if command -v rpmspec >/dev/null 2>&1; then
+        version="$(rpmspec -q --qf '%{version}' \
             "${RPM_MACROS[@]}" \
             "${RPM_TOPDIR_DEFINE[@]}" \
-            "${RPM_SOURCEDIR_DEFINE[@]}" \
-            -C "${sourcedir}" \
-            "${RPMBUILD_DIR}/SPECS/${spec_name}"
-        return 0
+            "${spec_path}" 2>/dev/null || true)"
+        name="$(rpmspec -q --qf '%{name}' \
+            "${RPM_MACROS[@]}" \
+            "${RPM_TOPDIR_DEFINE[@]}" \
+            "${spec_path}" 2>/dev/null || true)"
     fi
 
-    local version name
-    version="$(grep -E '^Version[[:space:]]*:' "${spec_file}" | awk '{print $2}' | head -1)"
-    name="$(grep -E '^Name[[:space:]]*:' "${spec_file}" | awk '{print $2}' | head -1)"
+    if [ -z "${version}" ]; then
+        version="$(grep -E '^Version[[:space:]]*:' "${spec_path}" | awk '{print $2}' | head -1)"
+    fi
+    if [ -z "${name}" ]; then
+        name="$(grep -E '^Name[[:space:]]*:' "${spec_path}" | awk '{print $2}' | head -1)"
+    fi
 
-    log "Fetching sources for ${spec_name} via curl"
     while IFS= read -r line; do
         [[ "${line}" =~ ^Source[0-9]+[[:space:]]*:[[:space:]]*(https?://.+) ]] || continue
         local url="${BASH_REMATCH[1]}"
         url="${url//%\{version\}/${version}}"
         url="${url//%\{name\}/${name}}"
         local dest="${sourcedir}/$(basename "${url}")"
-        if [ ! -f "${dest}" ]; then
-            log "Downloading ${url}"
-            curl -fSL -o "${dest}" "${url}"
+        if [ -f "${dest}" ]; then
+            log "Source already present: $(basename "${dest}")"
+            continue
         fi
-    done < "${spec_file}"
+        log "Downloading source: ${url}"
+        curl -fSL -o "${dest}" "${url}"
+    done < "${spec_path}"
 }
 
 setup_rpmbuild() {

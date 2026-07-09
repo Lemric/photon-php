@@ -1,0 +1,2 @@
+# RPM macros — configure curl as the source download helper on Photon OS
+%_urlhelper curl -fsSL -o

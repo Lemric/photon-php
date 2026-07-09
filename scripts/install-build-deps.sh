@@ -77,12 +77,9 @@ log "Installing PHP 8.5 RPM macros"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 install -m 0644 "${PROJECT_ROOT}/packaging/macros.php85" /etc/rpm/macros.php85
+install -m 0644 "${PROJECT_ROOT}/packaging/macros.urlhelper" /etc/rpm/macros.urlhelper
 
-log "Configuring RPM download helper (curl)"
-# Photon OS does not ship a default %_urlhelper; rpmbuild cannot fetch Source URLs without it.
-cat > /etc/rpm/macros.urlhelper << 'EOF'
-%_urlhelper curl -fsSL -o
-EOF
+log "RPM download helper configured (curl)"
 
 log "Build dependencies installed successfully."
 log "Note: re2c >= 3.x and libzip are built from source RPMs by scripts/build-rpm.sh"
