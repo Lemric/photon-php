@@ -34,7 +34,7 @@ Source4:        php85-php-fpm.service
 Source5:        10-opcache.ini
 
 BuildRequires:  gcc
-BuildRequires:  gcc-c++
+BuildRequires:  libstdc++-devel
 BuildRequires:  make
 BuildRequires:  autoconf
 BuildRequires:  automake
@@ -48,13 +48,13 @@ BuildRequires:  sqlite-devel
 BuildRequires:  zlib-devel
 BuildRequires:  libzip-devel
 BuildRequires:  oniguruma-devel
-BuildRequires:  libicu-devel
-BuildRequires:  libcurl-devel
+BuildRequires:  icu-devel
+BuildRequires:  curl-devel
 BuildRequires:  libpng-devel
 BuildRequires:  libjpeg-turbo-devel
-BuildRequires:  freetype-devel
+BuildRequires:  freetype2-devel
 BuildRequires:  libwebp-devel
-BuildRequires:  postgresql-devel
+BuildRequires:  postgresql18-devel
 BuildRequires:  systemd-devel
 
 Provides:       php = %{version}
@@ -108,7 +108,7 @@ Multibyte string handling extension for PHP.
 %package intl
 Summary:        intl extension for PHP %{version}
 Requires:       %{name}-common = %{version}-%{release}
-Requires:       libicu
+Requires:       icu
 
 %description intl
 Internationalization extension for PHP.
@@ -138,7 +138,7 @@ DOM, SimpleXML, XML, XMLReader and XMLWriter extensions for PHP.
 %package curl
 Summary:        curl extension for PHP %{version}
 Requires:       %{name}-common = %{version}-%{release}
-Requires:       libcurl
+Requires:       curl
 
 %description curl
 cURL extension for PHP.
@@ -153,7 +153,7 @@ Summary:        GD imaging extension for PHP %{version}
 Requires:       %{name}-common = %{version}-%{release}
 Requires:       libpng
 Requires:       libjpeg-turbo
-Requires:       freetype
+Requires:       freetype2
 Requires:       libwebp
 
 %description gd
@@ -242,7 +242,7 @@ MySQL Native Driver with mysqli and PDO MySQL extensions.
 %package pgsql
 Summary:        PostgreSQL extensions for PHP %{version}
 Requires:       %{name}-common = %{version}-%{release}
-Requires:       postgresql-libs
+Requires:       postgresql18-libs
 
 %description pgsql
 PostgreSQL database extensions (pgsql and pdo_pgsql) for PHP.

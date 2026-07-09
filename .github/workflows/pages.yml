@@ -1,4 +1,4 @@
-name: Publish package repository (GitHub Pages)
+name: Publish package repository
 
 on:
   push:
@@ -13,18 +13,17 @@ on:
         default: '8.5.8'
 
 concurrency:
-  group: pages
+  group: publish-packages
   cancel-in-progress: false
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 env:
   PHP_VERSION: ${{ github.event.inputs.php_version || '8.5.8' }}
   PHOTON_VERSION: '5.0'
   REPO_BASEURL: https://pkgs.photon.lemric.com
+  PUBLISH_BRANCH: gh-pages
 
 jobs:
   build:
@@ -52,7 +51,7 @@ jobs:
 
       - name: Build all RPMs
         run: |
-          docker run --rm \
+          docker run --privileged --rm \
             --platform ${{ matrix.platform }} \
             -v "${{ github.workspace }}:/build" \
             -w /build \
@@ -69,7 +68,7 @@ jobs:
 
       - name: Create repository metadata
         run: |
-          docker run --rm \
+          docker run --privileged --rm \
             --platform ${{ matrix.platform }} \
             -v "${{ github.workspace }}:/build" \
             -w /build \
@@ -88,58 +87,67 @@ jobs:
           path: repo/${{ matrix.arch }}/
           retention-days: 7
 
-  deploy:
-    name: Deploy to GitHub Pages
+  publish:
+    name: Publish to gh-pages branch
     runs-on: ubuntu-latest
     needs: build
-    environment:
-      name: github-pages
-      url: https://pkgs.photon.lemric.com
 
     steps:
-      - name: Checkout repository
+      - name: Checkout source (templates only)
         uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            pages
+          sparse-checkout-cone-mode: false
 
       - name: Download architecture artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Assemble site
+      - name: Assemble package repository
         run: |
           set -euo pipefail
-          mkdir -p _site/x86_64 _site/aarch64
+          mkdir -p publish/x86_64 publish/aarch64
 
-          cp -a artifacts/repo-x86_64/. _site/x86_64/
-          cp -a artifacts/repo-aarch64/. _site/aarch64/
+          cp -a artifacts/repo-x86_64/. publish/x86_64/
+          cp -a artifacts/repo-aarch64/. publish/aarch64/
 
-          test -d _site/x86_64/repodata
-          test -d _site/aarch64/repodata
-          ls _site/x86_64/*.rpm >/dev/null
-          ls _site/aarch64/*.rpm >/dev/null
+          test -d publish/x86_64/repodata
+          test -d publish/aarch64/repodata
+          ls publish/x86_64/*.rpm >/dev/null
+          ls publish/aarch64/*.rpm >/dev/null
 
-          cp pages/CNAME _site/CNAME
-          cp pages/.nojekyll _site/.nojekyll
-          cp pages/photon-php.repo _site/photon-php.repo
-          cp pages/index.html _site/index.html
-          sed -i "s/@PHP_VERSION@/${{ env.PHP_VERSION }}/g" _site/index.html
-          sed -i "s|@GITHUB_REPOSITORY@|${{ github.repository }}|g" _site/index.html
+          cp pages/CNAME publish/CNAME
+          cp pages/.nojekyll publish/.nojekyll
+          cp pages/photon-php.repo publish/photon-php.repo
+          cp pages/index.html publish/index.html
+          cp pages/BRANCH-README.md publish/README.md
+          sed -i "s/@PHP_VERSION@/${{ env.PHP_VERSION }}/g" publish/index.html
+          sed -i "s|@GITHUB_REPOSITORY@|${{ github.repository }}|g" publish/index.html
 
-          cat > _site/repodata.json << EOF
+          cat > publish/repodata.json << EOF
           {
             "name": "photon-php",
             "baseurl": "${{ env.REPO_BASEURL }}",
             "php_version": "${{ env.PHP_VERSION }}",
             "architectures": ["x86_64", "aarch64"],
-            "updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            "updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "${{ github.sha }}"
           }
           EOF
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
+          echo "Package repository contents:"
+          find publish -maxdepth 2 -type d
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Push to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: ${{ env.PUBLISH_BRANCH }}
+          publish_dir: ./publish
+          cname: pkgs.photon.lemric.com
+          force_orphan: true
+          commit_message: 'publish: PHP ${{ env.PHP_VERSION }} (${{ github.sha }})'
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com

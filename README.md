@@ -20,7 +20,7 @@ Production-ready RPM packaging system for **PHP >= 8.5.8** compiled from officia
 ├── extensions/            # PECL extension specs
 ├── docker/                # Photon OS docker-library/php compatible images
 │   └── 8.5/photon/        # CLI + FPM
-├── pages/                 # GitHub Pages (CNAME, index, repo template)
+├── pages/                 # GitHub Pages templates (deployed to gh-pages branch)
 ├── scripts/               # Build automation
 └── repo/                  # Local build output (not committed)
 ```
@@ -74,7 +74,7 @@ docker build -f docker/Dockerfile.builder -t photon-php-builder .
 docker run --rm -v "$(pwd):/build" -w /build photon-php-builder all
 
 # Create repo metadata
-docker run --rm -v "$(pwd):/build" -w /build photon:5.0 \
+docker run --privileged --rm -v "$(pwd):/build" -w /build photon:5.0 \
   bash -c "tdnf install -y createrepo_c && ./scripts/build-repo.sh"
 ```
 
@@ -85,7 +85,7 @@ docker buildx create --use --name photon-builder 2>/dev/null || true
 
 for ARCH in x86_64 aarch64; do
   PLATFORM=$([ "$ARCH" = "aarch64" ] && echo "linux/arm64" || echo "linux/amd64")
-  docker run --rm --platform "$PLATFORM" \
+  docker run --privileged --rm --platform "$PLATFORM" \
     -v "$(pwd):/build" -w /build \
     -e ARCH="$ARCH" \
     -e OUTPUT_DIR="/build/repo/$ARCH" \
@@ -93,7 +93,7 @@ for ARCH in x86_64 aarch64; do
     bash -c "chmod +x scripts/*.sh && scripts/install-build-deps.sh && scripts/build-rpm.sh all"
 done
 
-docker run --rm -v "$(pwd):/build" -w /build photon:5.0 \
+docker run --privileged --rm -v "$(pwd):/build" -w /build photon:5.0 \
   bash -c "tdnf install -y createrepo_c && ./scripts/build-repo.sh"
 ```
 
@@ -240,13 +240,24 @@ Both approaches compile PHP 8.5.8 from php.net sources.
 
 ## GitHub Pages
 
-The RPM repository is published automatically at **https://pkgs.photon.lemric.com** on every push to `main`.
+The RPM repository is published to the dedicated **`gh-pages`** branch and served at **https://pkgs.photon.lemric.com**.
 
-### Domain configuration
+| Branch | Contents |
+|--------|----------|
+| `main` | Source code, specs, CI workflows |
+| `gh-pages` | RPM packages only (`x86_64/`, `aarch64/`, repo metadata) |
 
-1. In the GitHub repository: **Settings → Pages → Build and deployment → Source: GitHub Actions**
-2. **Custom domain:** `pkgs.photon.lemric.com` (see `pages/CNAME`)
-3. In DNS:
+The `gh-pages` branch is updated automatically on every push to `main` by the `pages.yml` workflow. Do not commit source code to `gh-pages`.
+
+### GitHub repository settings
+
+1. **Settings → Pages → Build and deployment**
+2. **Source:** Deploy from a branch
+3. **Branch:** `gh-pages` / `/ (root)`
+4. **Custom domain:** `pkgs.photon.lemric.com`
+5. Enable **Enforce HTTPS** after DNS propagation
+
+### DNS configuration
 
 | Type | Name | Value |
 |------|------|-------|
@@ -258,7 +269,7 @@ The RPM repository is published automatically at **https://pkgs.photon.lemric.co
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `pages.yml` | Push to main, release | Build RPMs and deploy to GitHub Pages |
+| `pages.yml` | Push to main, release | Build RPMs and publish to `gh-pages` branch |
 | `build-php85.yml` | Push to main | Build PHP core RPMs (CI validation) |
 | `build-extensions.yml` | Push to extensions/ | Build PECL extension RPMs |
 | `test-install.yml` | Push/PR | Install RPMs and run functional tests |
@@ -291,7 +302,10 @@ Some packages may not exist in default Photon OS 5.x repositories. This project 
 | Package | Spec | Required for |
 |---------|------|-------------|
 | `re2c` >= 3.x | `packaging/re2c.spec` | PHP 8.5 build |
+| `libzip` | `packaging/libzip.spec` | php85-zip extension |
 | `rabbitmq-c` | `packaging/rabbitmq-c.spec` | php85-pecl-amqp |
+
+See [packaging/photon-packages.md](packaging/photon-packages.md) for Photon OS vs Fedora package name mapping.
 
 Build order is handled automatically by `scripts/build-rpm.sh`.
 

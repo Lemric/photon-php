@@ -12,7 +12,7 @@ URL:            https://re2c.org/
 Source0:        https://github.com/skvadrik/re2c/releases/download/%{version}/re2c-%{version}.tar.xz
 
 BuildRequires:  gcc
-BuildRequires:  gcc-c++
+BuildRequires:  libstdc++-devel
 BuildRequires:  make
 BuildRequires:  cmake
 

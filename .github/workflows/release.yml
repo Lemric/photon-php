@@ -46,7 +46,7 @@ jobs:
 
       - name: Build all RPMs
         run: |
-          docker run --rm \
+          docker run --privileged --rm \
             --platform ${{ matrix.platform }} \
             -v "${{ github.workspace }}:/build" \
             -w /build \

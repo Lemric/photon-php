@@ -106,6 +106,17 @@ build_rabbitmq_c() {
         rpm -Uvh --nodeps "${OUTPUT_DIR}"/rabbitmq-c-*.rpm 2>/dev/null || true
 }
 
+build_libzip() {
+    if pkg-config --exists libzip 2>/dev/null || rpm -q libzip-devel >/dev/null 2>&1; then
+        log "libzip already installed"
+        return 0
+    fi
+    log "Building libzip (not in Photon OS repos)"
+    build_spec "${PROJECT_ROOT}/packaging/libzip.spec"
+    tdnf install -y "${OUTPUT_DIR}"/libzip-*.rpm 2>/dev/null || \
+        rpm -Uvh --nodeps "${OUTPUT_DIR}"/libzip-*.rpm 2>/dev/null || true
+}
+
 build_php() {
     log "Building PHP ${PHP_VERSION}"
     build_spec "${PROJECT_ROOT}/packaging/php85.spec"
@@ -150,8 +161,12 @@ main() {
         re2c)
             build_re2c
             ;;
+        libzip)
+            build_libzip
+            ;;
         php)
             build_re2c
+            build_libzip
             build_php
             ;;
         extensions)
@@ -159,11 +174,12 @@ main() {
             ;;
         all)
             build_re2c
+            build_libzip
             build_php
             build_extensions
             ;;
         *)
-            echo "Usage: $0 [re2c|php|extensions|all]" >&2
+            echo "Usage: $0 [re2c|libzip|php|extensions|all]" >&2
             exit 1
             ;;
     esac

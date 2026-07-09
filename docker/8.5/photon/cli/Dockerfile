@@ -19,7 +19,7 @@ ENV PHPIZE_DEPS \
 		libtool \
 		pkg-config \
 		gcc \
-		gcc-c++ \
+		libstdc++-devel \
 		make \
 		re2c \
 		file \
@@ -35,7 +35,7 @@ RUN set -eux; \
 		xz \
 		tar \
 		shadow \
-		gnupg2 \
+		gnupg \
 		gawk \
 		grep \
 		sed \
@@ -49,7 +49,7 @@ RUN set -eux; \
 	if awk "BEGIN {exit !($re2c_ver >= 3.0)}"; then \
 		echo "re2c $re2c_ver is sufficient"; \
 	else \
-		tdnf install -y cmake gcc gcc-c++ make tar xz curl; \
+		tdnf install -y cmake gcc libstdc++-devel make tar xz curl; \
 		cd /tmp; \
 		curl -fsSL -o re2c.tar.xz https://github.com/skvadrik/re2c/releases/download/3.1/re2c-3.1.tar.xz; \
 		tar -xf re2c.tar.xz; \
@@ -99,7 +99,7 @@ RUN set -eux; \
 	rpm -qa --queryformat '%{NAME}\n' | sort > /tmp/rpm-before.txt; \
 	tdnf install -y \
 		openssl-devel \
-		libcurl-devel \
+		curl-devel \
 		oniguruma-devel \
 		readline-devel \
 		sqlite-devel \
@@ -107,6 +107,11 @@ RUN set -eux; \
 		zlib-devel \
 		libsodium-devel \
 		libargon2-devel \
+		icu-devel \
+		freetype2-devel \
+		libpng-devel \
+		libjpeg-turbo-devel \
+		libwebp-devel \
 	; \
 	export \
 		CFLAGS="$PHP_CFLAGS" \

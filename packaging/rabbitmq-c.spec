@@ -12,7 +12,7 @@ URL:            https://github.com/alanxz/rabbitmq-c
 Source0:        https://github.com/alanxz/rabbitmq-c/archive/v%{version}/rabbitmq-c-%{version}.tar.gz
 
 BuildRequires:  gcc
-BuildRequires:  gcc-c++
+BuildRequires:  libstdc++-devel
 BuildRequires:  cmake
 BuildRequires:  make
 BuildRequires:  openssl-devel

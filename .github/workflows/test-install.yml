@@ -34,7 +34,7 @@ jobs:
 
       - name: Build RPMs
         run: |
-          docker run --rm \
+          docker run --privileged --rm \
             --platform ${{ matrix.platform }} \
             -v "${{ github.workspace }}:/build" \
             -w /build \
@@ -53,7 +53,7 @@ jobs:
 
       - name: Test installation and functionality
         run: |
-          docker run --rm \
+          docker run --privileged --rm \
             --platform ${{ matrix.platform }} \
             -v "${{ github.workspace }}/repo/${{ matrix.arch }}:/repo:ro" \
             photon:${{ env.PHOTON_VERSION }} \

@@ -7,13 +7,20 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-echo "==> Refreshing tdnf metadata"
+log() { echo "==> $*"; }
+
+install_pkgs() {
+    tdnf install -y "$@"
+}
+
+log "Refreshing tdnf metadata"
 tdnf makecache
 
-echo "==> Installing Photon OS base build toolchain"
-tdnf install -y \
+log "Installing Photon OS base build toolchain"
+# Photon OS 5.x uses libstdc++-devel instead of gcc-c++, shadow instead of shadow-utils
+install_pkgs \
     gcc \
-    gcc-c++ \
+    libstdc++-devel \
     make \
     cmake \
     autoconf \
@@ -29,44 +36,48 @@ tdnf install -y \
     wget \
     curl \
     git \
-    shadow-utils \
+    shadow \
     systemd-devel \
     findutils \
-    which
+    which \
+    gnupg \
+    gawk \
+    binutils
 
-echo "==> Installing library development headers"
-tdnf install -y \
+log "Installing library development headers (Photon package names)"
+# Photon OS package naming differs from Fedora/RHEL — see packaging/photon-packages.md
+install_pkgs \
     openssl-devel \
     libxml2-devel \
     sqlite-devel \
     zlib-devel \
-    libzip-devel \
     oniguruma-devel \
-    libicu-devel \
-    libcurl-devel \
+    icu-devel \
+    curl-devel \
     libpng-devel \
     libjpeg-turbo-devel \
-    freetype-devel \
+    freetype2-devel \
     libwebp-devel \
-    postgresql-devel \
-    || true
+    postgresql18-devel \
+    libsodium-devel \
+    libargon2-devel \
+    readline-devel
 
-echo "==> Installing optional extension build dependencies"
-tdnf install -y \
+log "Installing optional extension build dependencies"
+install_pkgs \
     ImageMagick-devel \
-    rabbitmq-c-devel \
-    || echo "WARNING: Some optional -devel packages are not in Photon repos."
-echo "    Build ImageMagick/rabbitmq-c RPMs from source if needed (see README)."
+    || log "WARNING: ImageMagick-devel not available — imagick extension may fail."
 
-echo "==> Setting up rpmbuild tree"
+log "Setting up rpmbuild tree"
 rpmdev-setuptree 2>/dev/null || {
     mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 }
 
-echo "==> Installing PHP 8.5 RPM macros"
+log "Installing PHP 8.5 RPM macros"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 install -m 0644 "${PROJECT_ROOT}/packaging/macros.php85" /etc/rpm/macros.php85
 
-echo "==> Build dependencies installed successfully."
-echo "    Next: run scripts/build-rpm.sh to build re2c and PHP RPMs."
+log "Build dependencies installed successfully."
+log "Note: re2c >= 3.x and libzip are built from source RPMs by scripts/build-rpm.sh"
+log "Next: run scripts/build-rpm.sh to build re2c, libzip, and PHP RPMs."

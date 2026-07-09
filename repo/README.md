@@ -1,10 +1,11 @@
 # Photon PHP RPM Repository
 
-Public package repository for VMware Photon OS 5.x, served via GitHub Pages.
+Public package repository for VMware Photon OS 5.x.
 
-**URL:** https://pkgs.photon.lemric.com
+**URL:** https://pkgs.photon.lemric.com  
+**Branch:** `gh-pages` (packages only — no source code)
 
-RPM files are built by CI and published automatically — they are not committed to git.
+RPM files are built from `main` by CI and published to the `gh-pages` branch automatically.
 
 ## Structure (on GitHub Pages)
 
@@ -72,13 +73,13 @@ Configure in your DNS provider:
 |------|------|-------|
 | CNAME | `pkgs.photon` | `<user>.github.io` |
 
-Then in GitHub repository **Settings → Pages → Custom domain**, enter:
+Then in GitHub repository **Settings → Pages**:
 
-```
-pkgs.photon.lemric.com
-```
+1. **Source:** Deploy from branch → `gh-pages` / `/ (root)`
+2. **Custom domain:** `pkgs.photon.lemric.com`
+3. Enable **Enforce HTTPS** after DNS propagation.
 
-Enable **Enforce HTTPS** after DNS propagation.
+The `CNAME` file is deployed automatically to the `gh-pages` branch by CI.
 
 ## Available packages
 
