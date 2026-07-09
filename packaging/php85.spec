@@ -71,15 +71,15 @@ Requires:       %{name}-common = %{version}-%{release}
 %include php85-devel.spec
 
 %package opcache
-Summary:        OPcache extension for PHP %{version}
+Summary:        OPcache configuration for PHP %{version}
 Requires:       %{name}-common = %{version}-%{release}
 
 %description opcache
-The Zend OPcache extension provides fast bytecode caching for PHP.
+OPcache is built into PHP 8.5 and always loaded. This package installs
+production OPcache/JIT settings under %{php85_extdir}.
 
 %files opcache
 %defattr(-,root,root,-)
-%{php85_moddir}/opcache.so
 %config(noreplace) %{php85_extdir}/10-opcache.ini
 
 %package process
@@ -284,7 +284,6 @@ export LDFLAGS="%{php85_ldflags}"
     --with-fpm-group=%{php85_fpm_group} \
     --with-fpm-acl \
     --enable-cli \
-    --enable-opcache=shared \
     --enable-mbstring=shared \
     --enable-intl=shared \
     --enable-bcmath=shared \
@@ -393,6 +392,8 @@ sapi/cli/php -n -m | head -20
 %doc README.md
 
 %changelog
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-5
+- php85-opcache is config-only; OPcache is built into PHP 8.5 (no opcache.so)
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-4
 - Move shared modules from php/extensions/<api>/ into %{php85_moddir}
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-3
