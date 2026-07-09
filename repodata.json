@@ -3,7 +3,7 @@
   "baseurl": "https://pkgs.photon.lemric.com",
   "php_version": "8.5.8",
   "architectures": ["x86_64", "aarch64"],
-  "updated": "2026-07-09T19:42:37Z",
+  "updated": "2026-07-09T19:46:10Z",
   "commit": "99a7534d8e35279b6bf883fd6a30b87d5911bd0b",
-  "stage": "libzip"
+  "stage": "rabbitmq-c"
 }
