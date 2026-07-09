@@ -39,9 +39,11 @@ export CFLAGS="-O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC"
 %make_install
 install -d %{buildroot}%{php85_extdir}
 install -d %{buildroot}%{php85_moddir}
-if [ -f modules/redis.so ]; then
-    install -m 0755 modules/redis.so %{buildroot}%{php85_moddir}/redis.so
+if [ ! -f modules/redis.so ]; then
+    echo "ERROR: redis.so was not built" >&2
+    exit 1
 fi
+install -m 0755 modules/redis.so %{buildroot}%{php85_moddir}/redis.so
 echo "extension=redis.so" > %{buildroot}%{php85_extdir}/30-redis.ini
 find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 

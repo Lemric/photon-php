@@ -68,6 +68,69 @@ jobs:
           path: repo/${{ matrix.arch }}/
           retention-days: 7
 
+  publish:
+    name: Publish to gh-pages
+    runs-on: ubuntu-latest
+    needs: build-rpms
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+
+    steps:
+      - name: Checkout pages templates
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            pages
+          sparse-checkout-cone-mode: false
+
+      - name: Download repository artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Assemble package repository
+        run: |
+          set -euo pipefail
+          mkdir -p publish/x86_64 publish/aarch64
+
+          cp -a artifacts/repo-x86_64/. publish/x86_64/
+          cp -a artifacts/repo-aarch64/. publish/aarch64/
+
+          test -d publish/x86_64/repodata
+          test -d publish/aarch64/repodata
+          ls publish/x86_64/*.rpm >/dev/null
+          ls publish/aarch64/*.rpm >/dev/null
+
+          cp pages/CNAME publish/CNAME
+          cp pages/.nojekyll publish/.nojekyll
+          cp pages/photon-php.repo publish/photon-php.repo
+          cp pages/index.html publish/index.html
+          cp pages/BRANCH-README.md publish/README.md
+          sed -i "s/@PHP_VERSION@/${{ env.PHP_VERSION }}/g" publish/index.html
+          sed -i "s|@GITHUB_REPOSITORY@|${{ github.repository }}|g" publish/index.html
+
+          cat > publish/repodata.json << EOF
+          {
+            "name": "photon-php",
+            "baseurl": "${{ env.REPO_BASEURL }}",
+            "php_version": "${{ env.PHP_VERSION }}",
+            "architectures": ["x86_64", "aarch64"],
+            "updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "${{ github.sha }}"
+          }
+          EOF
+
+      - name: Push to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: ${{ env.PUBLISH_BRANCH }}
+          publish_dir: ./publish
+          cname: pkgs.photon.lemric.com
+          force_orphan: true
+          commit_message: 'publish: PHP ${{ env.PHP_VERSION }} (${{ github.sha }})'
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
+
   test-install:
     name: Test install (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
@@ -120,8 +183,7 @@ jobs:
               }
 
               php -v | grep -E 'PHP 8\.5\.[0-9]+'
-              php -m | grep -E '^(mbstring|intl|curl|gd|zip|bcmath|mysqli|pdo_mysql|pgsql|pdo_pgsql)$'
-              php -m | grep -E '^(redis|igbinary)$'
+              php -m | grep -Ei '^(Zend OPcache|mbstring|intl|curl|gd|zip|bcmath|dom|xml|mysqli|pdo_mysql|pgsql|pdo_pgsql|redis|igbinary)$'
               php-fpm -t
               id php-fpm
               echo 'All tests passed'
@@ -130,7 +192,11 @@ jobs:
   docker-image:
     name: Docker PHP 8.5 (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
-    needs: build-rpms
+    needs: [build-rpms, publish]
+    if: |
+      always() &&
+      needs.build-rpms.result == 'success' &&
+      (needs.publish.result == 'success' || needs.publish.result == 'skipped')
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -198,66 +264,3 @@ jobs:
             "$IMAGE:${{ env.PHP_VERSION }}-x86_64" \
             "$IMAGE:${{ env.PHP_VERSION }}-aarch64"
           docker manifest push "$IMAGE:latest"
-
-  publish:
-    name: Publish to gh-pages
-    runs-on: ubuntu-latest
-    needs: [build-rpms, test-install]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
-
-    steps:
-      - name: Checkout pages templates
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            pages
-          sparse-checkout-cone-mode: false
-
-      - name: Download repository artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Assemble package repository
-        run: |
-          set -euo pipefail
-          mkdir -p publish/x86_64 publish/aarch64
-
-          cp -a artifacts/repo-x86_64/. publish/x86_64/
-          cp -a artifacts/repo-aarch64/. publish/aarch64/
-
-          test -d publish/x86_64/repodata
-          test -d publish/aarch64/repodata
-          ls publish/x86_64/*.rpm >/dev/null
-          ls publish/aarch64/*.rpm >/dev/null
-
-          cp pages/CNAME publish/CNAME
-          cp pages/.nojekyll publish/.nojekyll
-          cp pages/photon-php.repo publish/photon-php.repo
-          cp pages/index.html publish/index.html
-          cp pages/BRANCH-README.md publish/README.md
-          sed -i "s/@PHP_VERSION@/${{ env.PHP_VERSION }}/g" publish/index.html
-          sed -i "s|@GITHUB_REPOSITORY@|${{ github.repository }}|g" publish/index.html
-
-          cat > publish/repodata.json << EOF
-          {
-            "name": "photon-php",
-            "baseurl": "${{ env.REPO_BASEURL }}",
-            "php_version": "${{ env.PHP_VERSION }}",
-            "architectures": ["x86_64", "aarch64"],
-            "updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "commit": "${{ github.sha }}"
-          }
-          EOF
-
-      - name: Push to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: ${{ env.PUBLISH_BRANCH }}
-          publish_dir: ./publish
-          cname: pkgs.photon.lemric.com
-          force_orphan: true
-          commit_message: 'publish: PHP ${{ env.PHP_VERSION }} (${{ github.sha }})'
-          user_name: github-actions[bot]
-          user_email: github-actions[bot]@users.noreply.github.com

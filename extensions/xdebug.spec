@@ -37,9 +37,11 @@ export CFLAGS="-O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC"
 %make_install
 install -d %{buildroot}%{php85_extdir}
 install -d %{buildroot}%{php85_moddir}
-if [ -f modules/xdebug.so ]; then
-    install -m 0755 modules/xdebug.so %{buildroot}%{php85_moddir}/xdebug.so
+if [ ! -f modules/xdebug.so ]; then
+    echo "ERROR: xdebug.so was not built" >&2
+    exit 1
 fi
+install -m 0755 modules/xdebug.so %{buildroot}%{php85_moddir}/xdebug.so
 cat > %{buildroot}%{php85_extdir}/99-xdebug.ini << 'EOF'
 zend_extension=xdebug.so
 xdebug.mode=develop,debug

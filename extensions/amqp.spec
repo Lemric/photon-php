@@ -41,9 +41,11 @@ export PKG_CONFIG_PATH=%{_libdir}/pkgconfig
 %make_install
 install -d %{buildroot}%{php85_extdir}
 install -d %{buildroot}%{php85_moddir}
-if [ -f modules/amqp.so ]; then
-    install -m 0755 modules/amqp.so %{buildroot}%{php85_moddir}/amqp.so
+if [ ! -f modules/amqp.so ]; then
+    echo "ERROR: amqp.so was not built" >&2
+    exit 1
 fi
+install -m 0755 modules/amqp.so %{buildroot}%{php85_moddir}/amqp.so
 echo "extension=amqp.so" > %{buildroot}%{php85_extdir}/30-amqp.ini
 find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 

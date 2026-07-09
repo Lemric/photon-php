@@ -7,7 +7,7 @@
 %global php85_ver          8.5.8
 %global php85_major        85
 %global php85_api          20250925
-%global php85_zend_api     420250812
+%global php85_zend_api     420250925
 %global php85_confdir      /etc/php85
 %global php85_extdir       %{php85_confdir}/conf.d
 %global php85_moddir       /usr/lib64/php85/modules
@@ -128,6 +128,7 @@ Requires:       libxml2
 
 %description xml
 DOM, SimpleXML, XML, XMLReader and XMLWriter extensions for PHP.
+Built as shared modules for modular RPM packaging.
 
 %files xml
 %defattr(-,root,root,-)
@@ -284,25 +285,30 @@ export LDFLAGS="%{php85_ldflags}"
     --with-fpm-group=%{php85_fpm_group} \
     --with-fpm-acl \
     --enable-cli \
+    --enable-bcmath=shared \
+    --enable-dom=shared \
+    --enable-simplexml=shared \
+    --enable-xml=shared \
+    --enable-xmlreader=shared \
+    --enable-xmlwriter=shared \
     --enable-mbstring=shared \
     --enable-intl=shared \
-    --enable-bcmath=shared \
     --enable-soap=shared \
     --enable-sockets=shared \
     --enable-pcntl=shared \
     --enable-sysvmsg=shared \
     --enable-sysvsem=shared \
     --enable-sysvshm=shared \
+    --enable-pdo=shared \
     --with-openssl \
     --with-zlib \
-    --with-curl \
-    --with-libxml \
-    --with-zip \
-    --with-pdo-mysql=mysqlnd \
-    --with-mysqli=mysqlnd \
-    --with-pgsql \
-    --with-pdo-pgsql \
-    --enable-gd \
+    --with-curl=shared \
+    --with-zip=shared \
+    --with-mysqli=shared,mysqlnd \
+    --with-pdo-mysql=shared,mysqlnd \
+    --with-pgsql=shared \
+    --with-pdo-pgsql=shared \
+    --enable-gd=shared \
     --with-freetype \
     --with-jpeg \
     --with-webp \
@@ -368,6 +374,19 @@ fi
 
 find %{buildroot}%{php85_moddir} -name '*.so' -exec strip --strip-unneeded {} \;
 
+missing=""
+for mod in bcmath mbstring intl dom simplexml xml xmlreader xmlwriter curl gd zip \
+           soap sockets pcntl sysvmsg sysvsem sysvshm mysqli pdo_mysql pgsql pdo_pgsql; do
+    if [ ! -f %{buildroot}%{php85_moddir}/${mod}.so ]; then
+        missing="${missing} ${mod}.so"
+    fi
+done
+if [ -n "${missing}" ]; then
+    echo "ERROR: missing shared modules:${missing}" >&2
+    ls -la %{buildroot}%{php85_moddir}/ >&2 || true
+    exit 1
+fi
+
 # PHP installs man pages under $prefix/php/man, not %{_mandir}.
 if [ -d %{buildroot}/usr/php/man ]; then
     mkdir -p %{buildroot}%{_mandir}
@@ -392,6 +411,8 @@ sapi/cli/php -n -m | head -20
 %doc README.md
 
 %changelog
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-6
+- Build all modular extensions as shared (.so); verify modules in %%install
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-5
 - php85-opcache is config-only; OPcache is built into PHP 8.5 (no opcache.so)
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-4

@@ -2,6 +2,9 @@
 # CI build entrypoint — runs the full RPM chain in one container session.
 set -euo pipefail
 
+export LC_ALL=C
+export LANG=C
+
 ARCH="${ARCH:?ARCH is required}"
 OUTPUT_DIR="${OUTPUT_DIR:-/build/repo/${ARCH}}"
 RPMBUILD_DIR="${RPMBUILD_DIR:-/build/.rpmbuild-${ARCH}}"

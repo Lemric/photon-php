@@ -10,7 +10,7 @@
 %define php85_ver 8.5.8
 %define php85_major 85
 %define php85_api 20250925
-%define php85_zend_api 420250812
+%define php85_zend_api 420250925
 %define php85_prefix php85
 %define php85_sname php
 %define php85_confdir /etc/php85

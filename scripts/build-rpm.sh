@@ -48,10 +48,8 @@ install_from_local_repo() {
         return 1
     fi
     refresh_local_repo
-    if tdnf install -y "${pkg}" 2>/dev/null; then
-        return 0
-    fi
-    log "Installing ${pkg} via rpm (tdnf repo unavailable)"
+    log "Installing ${pkg} via rpm"
+    # tdnf file:// repos fail on bind mounts in CI (Solv I/O error) — rpm -Uvh is reliable.
     # shellcheck disable=SC2086
     rpm -Uvh --replacepkgs ${rpms}
 }
@@ -189,12 +187,15 @@ build_spec() {
 
 detect_php_api() {
     if command -v php-config >/dev/null 2>&1; then
-        local api
+        local api zend_api
         api="$(php-config --phpapi 2>/dev/null || true)"
         if [ -n "${api}" ]; then
-            log "Detected PHP API version: ${api}"
+            zend_api="4${api}"
+            log "Detected PHP API version: ${api} (zend ${zend_api})"
             sed -i "s/%global php85_api.*/%global php85_api          ${api}/" "${MACROS_FILE}" 2>/dev/null || \
                 sed -i '' "s/%global php85_api.*/%global php85_api          ${api}/" "${MACROS_FILE}" 2>/dev/null || true
+            sed -i "s/%define php85_zend_api.*/%define php85_zend_api ${zend_api}/" "${MACROS_FILE}" 2>/dev/null || \
+                sed -i '' "s/%define php85_zend_api.*/%define php85_zend_api ${zend_api}/" "${MACROS_FILE}" 2>/dev/null || true
         fi
     fi
 }
@@ -324,6 +325,7 @@ build_extensions() {
         fi
         log "Building extension: ${ext}"
         build_spec "${PROJECT_ROOT}/extensions/${ext}.spec"
+        install_from_local_repo "php85-pecl-${ext}"
     done
 }
 

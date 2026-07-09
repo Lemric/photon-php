@@ -37,9 +37,11 @@ export CFLAGS="-O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC"
 %make_install
 install -d %{buildroot}%{php85_extdir}
 install -d %{buildroot}%{php85_moddir}
-if [ -f modules/apcu.so ]; then
-    install -m 0755 modules/apcu.so %{buildroot}%{php85_moddir}/apcu.so
+if [ ! -f modules/apcu.so ]; then
+    echo "ERROR: apcu.so was not built" >&2
+    exit 1
 fi
+install -m 0755 modules/apcu.so %{buildroot}%{php85_moddir}/apcu.so
 cat > %{buildroot}%{php85_extdir}/30-apcu.ini << 'EOF'
 extension=apcu.so
 apc.enabled=1

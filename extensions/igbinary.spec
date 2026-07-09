@@ -37,9 +37,11 @@ export CFLAGS="-O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC"
 %make_install
 install -d %{buildroot}%{php85_extdir}
 install -d %{buildroot}%{php85_moddir}
-if [ -f modules/igbinary.so ]; then
-    install -m 0755 modules/igbinary.so %{buildroot}%{php85_moddir}/igbinary.so
+if [ ! -f modules/igbinary.so ]; then
+    echo "ERROR: igbinary.so was not built" >&2
+    exit 1
 fi
+install -m 0755 modules/igbinary.so %{buildroot}%{php85_moddir}/igbinary.so
 echo "extension=igbinary.so" > %{buildroot}%{php85_extdir}/30-igbinary.ini
 find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 
