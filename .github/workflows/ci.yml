@@ -1,4 +1,4 @@
-name: Build Photon RPMs
+name: Build Photon Bootstrap
 
 on:
   push:
@@ -6,30 +6,24 @@ on:
   pull_request:
     branches: [main, master]
   workflow_dispatch:
-    inputs:
-      php_version:
-        description: 'PHP version to build'
-        required: false
-        default: '8.5.8'
 
 concurrency:
-  group: build-rpms-${{ github.workflow }}-${{ github.ref }}
+  group: build-bootstrap-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: write
 
 env:
-  PHP_VERSION: ${{ github.event.inputs.php_version || '8.5.8' }}
   PHOTON_VERSION: '5.0'
   REPO_BASEURL: https://pkgs.photon.lemric.com
   PUBLISH_BRANCH: gh-pages
 
 jobs:
-  build-rpms:
-    name: 'RPMs ${{ matrix.arch }} (native)'
+  build-bootstrap:
+    name: 'Bootstrap ${{ matrix.arch }} (native)'
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 90
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -45,143 +39,42 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build RPMs (re2c → libzip → rabbitmq-c → php85 → PECL)
-        run: |
-          docker run --privileged --rm \
-            --platform ${{ matrix.platform }} \
-            -v "${{ github.workspace }}:/build" \
-            -w /build \
-            -e PHP_VERSION="${{ env.PHP_VERSION }}" \
-            -e ARCH="${{ matrix.arch }}" \
-            -e OUTPUT_DIR="/build/repo/${{ matrix.arch }}" \
-            -e RPMBUILD_DIR="/build/.rpmbuild-${{ matrix.arch }}" \
-            -e REPO_BASEURL="${{ env.REPO_BASEURL }}" \
-            photon:${{ env.PHOTON_VERSION }} \
-            bash -c 'chmod +x scripts/*.sh && scripts/ci-build.sh'
-
-      - name: Upload RPM repository artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: repo-${{ matrix.arch }}
-          path: repo/${{ matrix.arch }}/
-          retention-days: 7
-
-  publish:
-    name: Publish to gh-pages
-    runs-on: ubuntu-latest
-    needs: build-rpms
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
-
-    steps:
-      - name: Checkout pages templates
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            pages
-          sparse-checkout-cone-mode: false
-
-      - name: Download repository artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Assemble package repository
+      - name: Build and publish bootstrap packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          mkdir -p publish/x86_64 publish/aarch64
+          chmod +x scripts/*.sh
 
-          cp -a artifacts/repo-x86_64/. publish/x86_64/
-          cp -a artifacts/repo-aarch64/. publish/aarch64/
-
-          test -d publish/x86_64/repodata
-          test -d publish/aarch64/repodata
-          ls publish/x86_64/*.rpm >/dev/null
-          ls publish/aarch64/*.rpm >/dev/null
-
-          cp pages/CNAME publish/CNAME
-          cp pages/.nojekyll publish/.nojekyll
-          cp pages/photon-php.repo publish/photon-php.repo
-          cp pages/index.html publish/index.html
-          cp pages/BRANCH-README.md publish/README.md
-          sed -i "s/@PHP_VERSION@/${{ env.PHP_VERSION }}/g" publish/index.html
-          sed -i "s|@GITHUB_REPOSITORY@|${{ github.repository }}|g" publish/index.html
-
-          cat > publish/repodata.json << EOF
-          {
-            "name": "photon-php",
-            "baseurl": "${{ env.REPO_BASEURL }}",
-            "php_version": "${{ env.PHP_VERSION }}",
-            "architectures": ["x86_64", "aarch64"],
-            "updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "commit": "${{ github.sha }}"
+          publish_if_main() {
+            local stage="$1"
+            if [ "${{ github.event_name }}" = push ] \
+              && { [ "${{ github.ref }}" = refs/heads/main ] || [ "${{ github.ref }}" = refs/heads/master ]; }; then
+              GITHUB_REPOSITORY="${{ github.repository }}" \
+              GITHUB_SHA="${{ github.sha }}" \
+                scripts/ci-publish-rpms.sh "${{ matrix.arch }}" "repo/${{ matrix.arch }}" "${stage}"
+            fi
           }
-          EOF
 
-      - name: Push to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v4
+          for stage in re2c libzip rabbitmq-c; do
+            echo "=== Building bootstrap stage: ${stage} ==="
+            docker run --privileged --rm \
+              --platform ${{ matrix.platform }} \
+              -v "${{ github.workspace }}:/build" \
+              -w /build \
+              -e ARCH="${{ matrix.arch }}" \
+              -e OUTPUT_DIR="/build/repo/${{ matrix.arch }}" \
+              -e RPMBUILD_DIR="/build/.rpmbuild-${{ matrix.arch }}" \
+              -e REPO_BASEURL="${{ env.REPO_BASEURL }}" \
+              photon:${{ env.PHOTON_VERSION }} \
+              bash -c "scripts/ci-build-bootstrap.sh ${stage}"
+
+            publish_if_main "${stage}"
+          done
+
+      - name: Upload bootstrap artifact
+        uses: actions/upload-artifact@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: ${{ env.PUBLISH_BRANCH }}
-          publish_dir: ./publish
-          cname: pkgs.photon.lemric.com
-          force_orphan: true
-          commit_message: 'publish: PHP ${{ env.PHP_VERSION }} (${{ github.sha }})'
-          user_name: github-actions[bot]
-          user_email: github-actions[bot]@users.noreply.github.com
-
-  test-install:
-    name: Test install (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
-    needs: build-rpms
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-latest
-            platform: linux/amd64
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
-            platform: linux/arm64
-
-    steps:
-      - name: Download repository artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: repo-${{ matrix.arch }}
-          path: repo/${{ matrix.arch }}
-
-      - name: Test installation and functionality
-        run: |
-          docker run --privileged --rm \
-            --platform ${{ matrix.platform }} \
-            -v "${{ github.workspace }}/repo/${{ matrix.arch }}:/repo:ro" \
-            photon:${{ env.PHOTON_VERSION }} \
-            bash -c "
-              set -euo pipefail
-
-              rpm -Uvh --replacepkgs /repo/libzip-[0-9]*.rpm /repo/rabbitmq-c-[0-9]*.rpm
-              rpm -Uvh --replacepkgs \
-                /repo/php85-common-*.rpm /repo/php85-cli-*.rpm /repo/php85-fpm-*.rpm \
-                /repo/php85-opcache-*.rpm /repo/php85-mbstring-*.rpm /repo/php85-intl-*.rpm \
-                /repo/php85-xml-*.rpm /repo/php85-curl-*.rpm /repo/php85-gd-*.rpm \
-                /repo/php85-zip-*.rpm /repo/php85-bcmath-*.rpm /repo/php85-mysqlnd-*.rpm \
-                /repo/php85-pgsql-*.rpm /repo/php85-8*.rpm \
-                /repo/php85-pecl-redis-*.rpm /repo/php85-pecl-igbinary-*.rpm 2>/dev/null \
-              || {
-                tdnf install -y /repo/libzip-[0-9]*.rpm /repo/rabbitmq-c-[0-9]*.rpm \
-                  /repo/php85-common-*.rpm /repo/php85-cli-*.rpm /repo/php85-fpm-*.rpm \
-                  /repo/php85-opcache-*.rpm /repo/php85-mbstring-*.rpm /repo/php85-intl-*.rpm \
-                  /repo/php85-xml-*.rpm /repo/php85-curl-*.rpm /repo/php85-gd-*.rpm \
-                  /repo/php85-zip-*.rpm /repo/php85-bcmath-*.rpm /repo/php85-mysqlnd-*.rpm \
-                  /repo/php85-pgsql-*.rpm /repo/php85-8*.rpm \
-                  /repo/php85-pecl-redis-*.rpm /repo/php85-pecl-igbinary-*.rpm
-              }
-
-              php -v | grep -E 'PHP 8\.5\.[0-9]+'
-              php -m | grep -Ei '^(Zend OPcache|mbstring|intl|curl|gd|zip|bcmath|dom|xml|mysqli|pdo_mysql|pgsql|pdo_pgsql|redis|igbinary)$'
-              php-fpm -t
-              id php-fpm
-              echo 'All tests passed'
-            "
+          name: bootstrap-${{ matrix.arch }}
+          path: repo/${{ matrix.arch }}/
+          retention-days: 7

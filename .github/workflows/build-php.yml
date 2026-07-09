@@ -1,0 +1,182 @@
+name: Build PHP 8.5 RPMs
+
+on:
+  workflow_run:
+    workflows: ['Build Photon Bootstrap']
+    types: [completed]
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      php_version:
+        description: 'PHP version to build'
+        required: false
+        default: '8.5.8'
+      publish_branch:
+        description: 'Branch with published bootstrap RPMs'
+        required: false
+        default: 'gh-pages'
+
+concurrency:
+  group: build-php-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  PHP_VERSION: ${{ github.event.inputs.php_version || '8.5.8' }}
+  PHOTON_VERSION: '5.0'
+  REPO_BASEURL: https://pkgs.photon.lemric.com
+  PUBLISH_BRANCH: ${{ github.event.inputs.publish_branch || 'gh-pages' }}
+
+jobs:
+  build-php:
+    name: 'PHP ${{ matrix.arch }} (native)'
+    runs-on: ${{ matrix.runner }}
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Checkout published bootstrap RPMs
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PUBLISH_BRANCH }}
+          path: published
+          sparse-checkout: |
+            ${{ matrix.arch }}
+            repodata.json
+          sparse-checkout-cone-mode: false
+
+      - name: Build and publish PHP packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/*.sh
+
+          test -d "published/${{ matrix.arch }}"
+          ls "published/${{ matrix.arch }}"/*.rpm >/dev/null
+
+          COMMIT_SHA="${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}"
+
+          publish_stage() {
+            local stage="$1"
+            GITHUB_REPOSITORY="${{ github.repository }}" \
+            GITHUB_SHA="${COMMIT_SHA}" \
+              scripts/ci-publish-rpms.sh "${{ matrix.arch }}" "repo/${{ matrix.arch }}" "${stage}"
+          }
+
+          run_stage() {
+            local stage="$1"
+            echo "=== Building PHP stage: ${stage} ==="
+            docker run --privileged --rm \
+              --platform ${{ matrix.platform }} \
+              -v "${{ github.workspace }}:/build" \
+              -v "${{ github.workspace }}/published/${{ matrix.arch }}:/published:ro" \
+              -w /build \
+              -e PHP_VERSION="${{ env.PHP_VERSION }}" \
+              -e ARCH="${{ matrix.arch }}" \
+              -e OUTPUT_DIR="/build/repo/${{ matrix.arch }}" \
+              -e RPMBUILD_DIR="/build/.rpmbuild-${{ matrix.arch }}" \
+              -e REPO_BASEURL="${{ env.REPO_BASEURL }}" \
+              photon:${{ env.PHOTON_VERSION }} \
+              bash -c "scripts/ci-build-php.sh ${stage}"
+          }
+
+          run_stage php
+          publish_stage php
+
+          for ext in igbinary redis apcu amqp imagick xdebug; do
+            stage="extension:${ext}"
+            if ! run_stage "${stage}"; then
+              if [ "${ext}" = imagick ]; then
+                echo "WARNING: imagick build failed — skipping"
+                continue
+              fi
+              exit 1
+            fi
+            publish_stage "${stage}"
+          done
+
+      - name: Upload PHP repository artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo-${{ matrix.arch }}
+          path: repo/${{ matrix.arch }}/
+          retention-days: 7
+
+  test-install:
+    name: Test install (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    needs: build-php
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+
+    steps:
+      - name: Download repository artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: repo-${{ matrix.arch }}
+          path: repo/${{ matrix.arch }}
+
+      - name: Test installation and functionality
+        run: |
+          docker run --privileged --rm \
+            --platform ${{ matrix.platform }} \
+            -v "${{ github.workspace }}/repo/${{ matrix.arch }}:/repo:ro" \
+            photon:${{ env.PHOTON_VERSION }} \
+            bash -c "
+              set -euo pipefail
+
+              rpm -Uvh --replacepkgs /repo/libzip-[0-9]*.rpm /repo/rabbitmq-c-[0-9]*.rpm
+              rpm -Uvh --replacepkgs \
+                /repo/php85-common-*.rpm /repo/php85-cli-*.rpm /repo/php85-fpm-*.rpm \
+                /repo/php85-opcache-*.rpm /repo/php85-mbstring-*.rpm /repo/php85-intl-*.rpm \
+                /repo/php85-xml-*.rpm /repo/php85-curl-*.rpm /repo/php85-gd-*.rpm \
+                /repo/php85-zip-*.rpm /repo/php85-bcmath-*.rpm /repo/php85-mysqlnd-*.rpm \
+                /repo/php85-pgsql-*.rpm /repo/php85-8*.rpm \
+                /repo/php85-pecl-redis-*.rpm /repo/php85-pecl-igbinary-*.rpm 2>/dev/null \
+              || {
+                tdnf install -y /repo/libzip-[0-9]*.rpm /repo/rabbitmq-c-[0-9]*.rpm \
+                  /repo/php85-common-*.rpm /repo/php85-cli-*.rpm /repo/php85-fpm-*.rpm \
+                  /repo/php85-opcache-*.rpm /repo/php85-mbstring-*.rpm /repo/php85-intl-*.rpm \
+                  /repo/php85-xml-*.rpm /repo/php85-curl-*.rpm /repo/php85-gd-*.rpm \
+                  /repo/php85-zip-*.rpm /repo/php85-bcmath-*.rpm /repo/php85-mysqlnd-*.rpm \
+                  /repo/php85-pgsql-*.rpm /repo/php85-8*.rpm \
+                  /repo/php85-pecl-redis-*.rpm /repo/php85-pecl-igbinary-*.rpm
+              }
+
+              php -v | grep -E 'PHP 8\.5\.[0-9]+'
+              php -m | grep -Ei '^(Zend OPcache|mbstring|intl|curl|gd|zip|bcmath|dom|xml|mysqli|pdo_mysql|pgsql|pdo_pgsql|redis|igbinary)$'
+              php-fpm -t
+              id php-fpm
+              echo 'All tests passed'
+            "

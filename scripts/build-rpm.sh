@@ -299,33 +299,34 @@ imagick_build_available() {
         || rpm -q ImageMagick-devel >/dev/null 2>&1
 }
 
-build_extensions() {
-    log "Stage 5/5: PECL extensions (require php85-devel)"
+PECL_EXTENSIONS=(igbinary redis apcu amqp imagick xdebug)
+
+build_single_extension() {
+    local ext="${1:?extension name required}"
     ensure_re2c
     ensure_libzip
     ensure_php
-    ensure_rabbitmq_c
-
-    local ext_specs=(
-        igbinary
-        redis
-        apcu
-        amqp
-        imagick
-        xdebug
-    )
+    if [ "${ext}" = amqp ]; then
+        ensure_rabbitmq_c
+    fi
+    if [ "${ext}" = imagick ] && ! imagick_build_available; then
+        log "Skipping imagick — ImageMagick-devel not available on this platform"
+        return 0
+    fi
 
     export PHP_CONFIG=/usr/bin/php-config
     export PHP_PREFIX=/usr
 
-    for ext in "${ext_specs[@]}"; do
-        if [ "${ext}" = imagick ] && ! imagick_build_available; then
-            log "Skipping imagick — ImageMagick-devel not available on this platform"
-            continue
-        fi
-        log "Building extension: ${ext}"
-        build_spec "${PROJECT_ROOT}/extensions/${ext}.spec"
-        install_from_local_repo "php85-pecl-${ext}"
+    log "Building extension: ${ext}"
+    build_spec "${PROJECT_ROOT}/extensions/${ext}.spec"
+    install_from_local_repo "php85-pecl-${ext}"
+}
+
+build_extensions() {
+    log "Stage 5/5: PECL extensions (require php85-devel)"
+    local ext
+    for ext in "${PECL_EXTENSIONS[@]}"; do
+        build_single_extension "${ext}"
     done
 }
 
@@ -349,6 +350,9 @@ main() {
         rabbitmq-c) run_stage rabbitmq-c ;;
         php) run_stage php ;;
         extensions) run_stage extensions ;;
+        extension:*)
+            build_single_extension "${TARGET#extension:}"
+            ;;
         deps)
             run_stage re2c
             run_stage libzip
@@ -360,14 +364,15 @@ main() {
             done
             ;;
         *)
-            echo "Usage: $0 [re2c|libzip|rabbitmq-c|php|extensions|deps|all]" >&2
-            echo "  re2c         — bootstrap re2c >= 3.x" >&2
-            echo "  libzip       — re2c, then libzip" >&2
-            echo "  rabbitmq-c   — rabbitmq-c only" >&2
-            echo "  php          — re2c, libzip, then php85" >&2
-            echo "  extensions   — full chain through php85, then PECL" >&2
-            echo "  deps         — bootstrap packages only (re2c, libzip, rabbitmq-c)" >&2
-            echo "  all          — complete repository (default)" >&2
+            echo "Usage: $0 [re2c|libzip|rabbitmq-c|php|extensions|extension:NAME|deps|all]" >&2
+            echo "  re2c            — bootstrap re2c >= 3.x" >&2
+            echo "  libzip          — re2c, then libzip" >&2
+            echo "  rabbitmq-c      — rabbitmq-c only" >&2
+            echo "  php             — re2c, libzip, then php85" >&2
+            echo "  extensions      — full chain through php85, then PECL" >&2
+            echo "  extension:NAME  — single PECL extension (e.g. extension:redis)" >&2
+            echo "  deps            — bootstrap packages only (re2c, libzip, rabbitmq-c)" >&2
+            echo "  all             — complete repository (default)" >&2
             exit 1
             ;;
     esac

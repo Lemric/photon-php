@@ -247,7 +247,7 @@ The RPM repository is published to the dedicated **`gh-pages`** branch and serve
 | `main` | Source code, specs, CI workflows |
 | `gh-pages` | RPM packages only (`x86_64/`, `aarch64/`, repo metadata) |
 
-The `gh-pages` branch is updated automatically on every push to `main` by the `ci.yml` workflow. Do not commit source code to `gh-pages`.
+The `gh-pages` branch is updated incrementally by CI workflows after each package build. Do not commit source code to `gh-pages`.
 
 ### GitHub repository settings
 
@@ -269,8 +269,13 @@ The `gh-pages` branch is updated automatically on every push to `main` by the `c
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `ci.yml` | Push/PR to main, manual | Build RPMs (native runners), test install, publish to gh-pages |
-| `docker-image.yml` | After successful RPM publish, manual | Build/push Docker image from published RPMs on gh-pages |
+| `ci.yml` | Push/PR to main, manual | Build bootstrap RPMs (re2c, libzip, rabbitmq-c); publish each stage to gh-pages on push |
+| `build-php.yml` | After successful bootstrap publish, manual | Build PHP 8.5 + PECL; publish each package to gh-pages; test install |
+| `docker-image.yml` | After successful PHP build, manual | Build/push Docker image from published RPMs on gh-pages |
+
+### Manual PHP rebuild (without rebuilding bootstrap)
+
+Actions → **Build PHP 8.5 RPMs** → Run workflow. Uses bootstrap packages already on `gh-pages`.
 
 ### Manual Docker rebuild (without rebuilding RPMs)
 

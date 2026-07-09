@@ -17,7 +17,7 @@ on:
         type: boolean
         default: true
   workflow_run:
-    workflows: ['Build Photon RPMs']
+    workflows: ['Build PHP 8.5 RPMs']
     types: [completed]
     branches: [main, master]
 
