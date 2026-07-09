@@ -6,7 +6,7 @@
 
 %global php85_ver          8.5.8
 %global php85_major        85
-%global php85_api          20250812
+%global php85_api          20250925
 %global php85_zend_api     420250812
 %global php85_confdir      /etc/php85
 %global php85_extdir       %{php85_confdir}/conf.d
@@ -358,7 +358,9 @@ extension=pgsql.so
 extension=pdo_pgsql.so
 PGSQLEOF
 
-mv %{buildroot}%{_libdir}/php/modules/*.so %{buildroot}%{php85_moddir}/ 2>/dev/null || true
+# PHP 8.x installs shared extensions under $libdir/php/extensions/<build>-<api>/,
+# not under php/modules/ (that path is used by older layouts and PECL builds).
+find %{buildroot}%{_libdir}/php/extensions -name '*.so' -exec mv {} %{buildroot}%{php85_moddir}/ \; 2>/dev/null || true
 find %{buildroot}%{_libdir} -path '*/php/modules/*.so' -exec mv {} %{buildroot}%{php85_moddir}/ \; 2>/dev/null || true
 
 if [ -f %{buildroot}%{_libdir}/libphp.so ]; then
@@ -374,8 +376,9 @@ if [ -d %{buildroot}/usr/php/man ]; then
 fi
 rm -rf %{buildroot}/usr/php
 
-# Keep %{_libdir}/php/build for phpize; drop only the runtime modules tree.
+# Keep %{_libdir}/php/build for phpize; drop runtime extension trees.
 rm -rf %{buildroot}%{_libdir}/php/modules 2>/dev/null || true
+rm -rf %{buildroot}%{_libdir}/php/extensions 2>/dev/null || true
 rm -rf %{buildroot}%{_libdir}/php85
 rm -rf %{buildroot}%{_datadir}/php
 rm -rf %{buildroot}%{_localstatedir}/log/php-fpm.log 2>/dev/null || true
@@ -390,6 +393,8 @@ sapi/cli/php -n -m | head -20
 %doc README.md
 
 %changelog
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-4
+- Move shared modules from php/extensions/<api>/ into %{php85_moddir}
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-3
 - Relocate man pages from /usr/php/man to %{_mandir}; keep php/build for phpize
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-2

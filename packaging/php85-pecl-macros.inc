@@ -1,6 +1,6 @@
 # php85-pecl-macros — shared macros for PECL extension builds
 %global php85_ver          8.5.8
-%global php85_api          20250812
+%global php85_api          20250925
 %global php85_zend_api     420250812
 %global php85_confdir      /etc/php85
 %global php85_extdir       %{php85_confdir}/conf.d

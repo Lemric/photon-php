@@ -12,6 +12,8 @@ zend.exception_string_param_max_len = 0
 
 expose_php = Off
 
+extension_dir = /usr/lib64/php85/modules
+
 max_execution_time = 30
 max_input_time = 60
 memory_limit = 256M
