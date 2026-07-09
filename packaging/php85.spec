@@ -19,6 +19,7 @@
 %global php85_cflags       -O2 -flto=auto -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC
 %global php85_cxxflags     -O2 -flto=auto -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC
 %global php85_ldflags      -Wl,-z,relro -Wl,-z,now -flto=auto
+%global debug_package %{nil}
 
 Name:           php85
 Version:        %{php85_ver}

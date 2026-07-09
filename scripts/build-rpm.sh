@@ -270,6 +270,11 @@ build_php() {
     detect_php_api
 }
 
+imagick_build_available() {
+    pkg-config ImageMagick --exists 2>/dev/null \
+        || rpm -q ImageMagick-devel >/dev/null 2>&1
+}
+
 build_extensions() {
     log "Stage 5/5: PECL extensions (require php85-devel)"
     ensure_re2c
@@ -290,6 +295,10 @@ build_extensions() {
     export PHP_PREFIX=/usr
 
     for ext in "${ext_specs[@]}"; do
+        if [ "${ext}" = imagick ] && ! imagick_build_available; then
+            log "Skipping imagick — ImageMagick-devel not available on this platform"
+            continue
+        fi
         log "Building extension: ${ext}"
         build_spec "${PROJECT_ROOT}/extensions/${ext}.spec"
     done

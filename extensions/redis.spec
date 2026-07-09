@@ -32,7 +32,7 @@ key-value stores. Built with igbinary serializer support.
 %build
 export CFLAGS="-O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC"
 %{__phpize}
-./configure --enable-redis-igbinary --enable-redis-lzf --enable-redis-zstd
+./configure --enable-redis-igbinary
 %make_build
 
 %install

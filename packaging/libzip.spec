@@ -2,6 +2,7 @@
 # Not available in Photon OS 5.x default repositories.
 
 %global libzip_ver 1.11.4
+%global debug_package %{nil}
 
 Name:           libzip
 Version:        %{libzip_ver}
