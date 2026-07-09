@@ -317,6 +317,9 @@ export LDFLAGS="%{php85_ldflags}"
     --disable-static \
     --disable-debug \
     --disable-rpath \
+    --disable-cgi \
+    --disable-phpdbg \
+    --disable-phar \
     --without-pear \
     --enable-embed=shared
 
@@ -341,6 +344,7 @@ install -d %{buildroot}%{php85_confdir}/php-fpm.d
 install -m 0644 %{SOURCE3} %{buildroot}%{php85_confdir}/php-fpm.d/www.conf
 install -m 0644 %{SOURCE4} %{buildroot}%{_unitdir}/php85-php-fpm.service
 install -m 0644 %{SOURCE5} %{buildroot}%{php85_extdir}/10-opcache.ini
+echo "extension=pdo.so" > %{buildroot}%{php85_extdir}/15-pdo.ini
 
 for ext in mbstring intl curl gd zip bcmath soap sockets pcntl; do
     echo "extension=${ext}.so" > %{buildroot}%{php85_extdir}/20-${ext}.ini
@@ -376,7 +380,7 @@ fi
 find %{buildroot}%{php85_moddir} -name '*.so' -exec strip --strip-unneeded {} \;
 
 missing=""
-for mod in bcmath mbstring intl dom simplexml xml xmlreader xmlwriter curl gd zip \
+for mod in pdo bcmath mbstring intl dom simplexml xml xmlreader xmlwriter curl gd zip \
            soap sockets pcntl sysvmsg sysvsem sysvshm mysqli pdo_mysql pgsql pdo_pgsql; do
     if [ ! -f %{buildroot}%{php85_moddir}/${mod}.so ]; then
         missing="${missing} ${mod}.so"
@@ -395,6 +399,8 @@ if [ -d %{buildroot}/usr/php/man ]; then
 fi
 rm -rf %{buildroot}/usr/php
 
+rm -f %{buildroot}%{php85_confdir}/php-fpm.conf.default
+
 # Keep %{_libdir}/php/build for phpize; drop runtime extension trees.
 rm -rf %{buildroot}%{_libdir}/php/modules 2>/dev/null || true
 rm -rf %{buildroot}%{_libdir}/php/extensions 2>/dev/null || true
@@ -412,6 +418,8 @@ sapi/cli/php -n -m | head -20
 %doc README.md
 
 %changelog
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-8
+- Package pdo.so in php85-common; disable cgi/phpdbg/phar SAPIs
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-7
 - Disable pdo_sqlite (pdo is shared; no sqlite subpackage in repo)
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-6

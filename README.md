@@ -269,20 +269,12 @@ The `gh-pages` branch is updated automatically on every push to `main` by the `c
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `ci.yml` | Push/PR to main | **Single pipeline:** re2c → libzip → rabbitmq-c → php85 → PECL → test → publish |
-| `build-docker.yml` | Push to `docker/8.5/photon/**` | Build container images (docker-library/php layout) |
-| `release.yml` | Tag `php-8.5.*` | Build, package, and publish GitHub Release |
+| `ci.yml` | Push/PR to main, manual | Build RPMs (native runners), test install, publish to gh-pages |
+| `docker-image.yml` | After successful RPM publish, manual | Build/push Docker image from published RPMs on gh-pages |
 
-Legacy workflows (`build-php85.yml`, `build-extensions.yml`, `pages.yml`, `test-install.yml`) are **manual only** — use `ci.yml` instead.
+### Manual Docker rebuild (without rebuilding RPMs)
 
-### Creating a release
-
-```bash
-git tag php-8.5.8
-git push origin php-8.5.8
-```
-
-This triggers a release with RPM tarballs for both architectures.
+Actions → **Docker PHP 8.5 (from published RPMs)** → Run workflow. Uses packages already on `gh-pages`.
 
 ## Updating PHP
 

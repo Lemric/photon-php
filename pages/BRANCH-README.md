@@ -2,7 +2,7 @@
 
 This branch contains **only** the published RPM repository for GitHub Pages.
 
-Do not commit source code here. All changes are made on `main` and deployed by `.github/workflows/pages.yml`.
+Do not commit source code here. All changes are made on `main` and deployed by `.github/workflows/ci.yml` (job `publish`).
 
 ## Layout
 

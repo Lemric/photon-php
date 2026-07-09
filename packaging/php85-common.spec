@@ -5,7 +5,6 @@
 Summary:        Common files for PHP %{version}
 Requires:       %{name} = %{version}-%{release}
 Requires(pre):  shadow
-BuildArch:      noarch
 
 %description common
 Common files shared by PHP %{version} SAPIs and extensions, including
@@ -25,4 +24,6 @@ getent passwd %{php85_fpm_user} >/dev/null 2>&1 || \
 %dir %attr(0755,root,root) %{php85_fpm_logdir}
 %dir %attr(0755,root,root) /var/lib/php85-fpm
 %config(noreplace) %{php85_confdir}/php.ini
+%config(noreplace) %{php85_extdir}/15-pdo.ini
+%{php85_moddir}/pdo.so
 %ghost %attr(0644,root,root) %{php85_fpm_rundir}
