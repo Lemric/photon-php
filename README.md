@@ -269,8 +269,8 @@ The `gh-pages` branch is updated incrementally by CI workflows after each packag
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `ci.yml` | Push/PR to main, manual | Build bootstrap RPMs (re2c, libzip, rabbitmq-c); publish each stage to gh-pages on push |
-| `build-php.yml` | After successful bootstrap publish, manual | Build PHP 8.5 + PECL; publish each package to gh-pages; test install |
+| `ci.yml` | Push/PR to main, manual | Build bootstrap RPMs only when spec Version/Release changed; publish RPMs; reindex on every push to main |
+| `build-php.yml` | After bootstrap, manual | Build PHP/PECL only when spec Version/Release changed; publish RPMs; reindex after each run |
 | `docker-image.yml` | After successful PHP build, manual | Build/push Docker image from published RPMs on gh-pages |
 
 ### Manual PHP rebuild (without rebuilding bootstrap)
