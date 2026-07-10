@@ -15,7 +15,16 @@ PUBLISHED_DIR="${PUBLISHED_DIR:-/published}"
 
 log() { echo "[ci-php] $*"; }
 
-export ARCH OUTPUT_DIR RPMBUILD_DIR REPO_BASEURL
+export ARCH OUTPUT_DIR RPMBUILD_DIR REPO_BASEURL PUBLISHED_DIR
+
+seed_output_from_published() {
+    mkdir -p "${OUTPUT_DIR}"
+    if [ ! -d "${PUBLISHED_DIR}" ] || ! ls "${PUBLISHED_DIR}"/*.rpm >/dev/null 2>&1; then
+        return 0
+    fi
+    log "Seeding ${OUTPUT_DIR} from published RPMs"
+    cp -f "${PUBLISHED_DIR}"/*.rpm "${OUTPUT_DIR}/"
+}
 
 install_bootstrap_from_published() {
     if [ ! -d "${PUBLISHED_DIR}" ] || ! ls "${PUBLISHED_DIR}"/*.rpm >/dev/null 2>&1; then
@@ -41,6 +50,8 @@ log "=== Installing build dependencies ==="
 scripts/install-build-deps.sh
 
 install_bootstrap_from_published
+
+seed_output_from_published
 
 case "${STAGE}" in
     php)

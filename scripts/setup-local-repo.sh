@@ -23,8 +23,9 @@ if ! command -v createrepo_c >/dev/null 2>&1; then
     tdnf install -y createrepo_c
 fi
 
-createrepo_c --update --general-compress-type xz "${OUTPUT_DIR}" 2>/dev/null \
-    || createrepo_c --general-compress-type xz "${OUTPUT_DIR}"
+# Default gzip metadata — Photon tdnf/libsolv cannot read xz repodata (Solv I/O error).
+createrepo_c --update "${OUTPUT_DIR}" 2>/dev/null \
+    || createrepo_c "${OUTPUT_DIR}"
 
 cat > "/etc/yum.repos.d/${REPO_ID}.repo" << EOF
 [${REPO_ID}]

@@ -104,11 +104,8 @@ docker run --privileged --rm -v "$(pwd):/build" -w /build photon:5.0 \
 Public repository: **https://pkgs.photon.lemric.com**
 
 ```bash
-ARCH=$(uname -m)
-
 curl -fsSL https://pkgs.photon.lemric.com/photon-php.repo \
-  | sed "s|/x86_64|/${ARCH}|g" \
-  > /etc/yum.repos.d/photon-php.repo
+  -o /etc/yum.repos.d/photon-php.repo
 
 tdnf makecache
 tdnf install -y php85 php85-fpm php85-opcache
@@ -122,7 +119,7 @@ ARCH=$(uname -m)
 cat > /etc/yum.repos.d/photon-php.repo << EOF
 [photon-php]
 name=Photon PHP 8.5
-baseurl=https://pkgs.photon.lemric.com/${ARCH}
+baseurl=https://pkgs.photon.lemric.com/\${ARCH}
 enabled=1
 gpgcheck=0
 EOF

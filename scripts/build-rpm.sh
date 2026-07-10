@@ -21,6 +21,7 @@ TARGET="${1:-all}"
 
 RPMBUILD_DIR="${RPMBUILD_DIR:-${PROJECT_ROOT}/.rpmbuild}"
 OUTPUT_DIR="${OUTPUT_DIR:-${PROJECT_ROOT}/repo/${ARCH}}"
+PUBLISHED_DIR="${PUBLISHED_DIR:-}"
 
 MACROS_FILE="${PROJECT_ROOT}/packaging/macros.php85"
 
@@ -36,7 +37,23 @@ refresh_local_repo() {
 
 binary_rpms_in_output() {
     local pattern="${1:?pattern required}"
-    find "${OUTPUT_DIR}" -maxdepth 1 -name "${pattern}" ! -name '*.src.rpm' -type f 2>/dev/null
+    local -A seen=()
+    local dir rpm base results=()
+
+    for dir in "${OUTPUT_DIR}" ${PUBLISHED_DIR:+"${PUBLISHED_DIR}"}; do
+        [ -d "${dir}" ] || continue
+        while IFS= read -r rpm; do
+            [ -n "${rpm}" ] || continue
+            base="$(basename "${rpm}")"
+            [ -n "${seen[${base}]+x}" ] && continue
+            seen["${base}"]=1
+            results+=("${rpm}")
+        done < <(find "${dir}" -maxdepth 1 -name "${pattern}" ! -name '*.src.rpm' -type f 2>/dev/null | sort)
+    done
+
+    if [ "${#results[@]}" -gt 0 ]; then
+        printf '%s\n' "${results[@]}"
+    fi
 }
 
 install_from_local_repo() {
@@ -44,7 +61,7 @@ install_from_local_repo() {
     local rpms
     rpms="$(binary_rpms_in_output "${pkg}-*.${ARCH}.rpm" | tr '\n' ' ')"
     if [ -z "${rpms}" ]; then
-        log "ERROR: package ${pkg} not found in ${OUTPUT_DIR}" >&2
+        log "ERROR: package ${pkg} not found in ${OUTPUT_DIR}${PUBLISHED_DIR:+ or ${PUBLISHED_DIR}}" >&2
         return 1
     fi
     refresh_local_repo
@@ -79,12 +96,17 @@ ensure_igbinary() {
         return 0
     fi
     if [ -n "$(binary_rpms_in_output "php85-pecl-igbinary-*.${ARCH}.rpm")" ]; then
-        log "Installing pre-built php85-pecl-igbinary from ${OUTPUT_DIR}"
+        log "Installing pre-built php85-pecl-igbinary from local/published repo"
         install_from_local_repo php85-pecl-igbinary
         igbinary_build_headers_installed && return 0
     fi
-    log "ERROR: php85-pecl-igbinary with headers required before building redis" >&2
-    return 1
+    log "Building php85-pecl-igbinary (redis requires igbinary.h headers)"
+    build_spec "${PROJECT_ROOT}/extensions/igbinary.spec"
+    install_from_local_repo php85-pecl-igbinary
+    igbinary_build_headers_installed || {
+        log "ERROR: php85-pecl-igbinary with headers required before building redis" >&2
+        return 1
+    }
 }
 
 php85_devel_installed() {
@@ -211,17 +233,20 @@ build_spec() {
 }
 
 detect_php_api() {
-    if command -v php-config >/dev/null 2>&1; then
-        local api zend_api
-        api="$(php-config --phpapi 2>/dev/null || true)"
-        if [ -n "${api}" ]; then
-            zend_api="4${api}"
-            log "Detected PHP API version: ${api} (zend ${zend_api})"
-            sed -i "s/%global php85_api.*/%global php85_api          ${api}/" "${MACROS_FILE}" 2>/dev/null || \
-                sed -i '' "s/%global php85_api.*/%global php85_api          ${api}/" "${MACROS_FILE}" 2>/dev/null || true
-            sed -i "s/%define php85_zend_api.*/%define php85_zend_api ${zend_api}/" "${MACROS_FILE}" 2>/dev/null || \
-                sed -i '' "s/%define php85_zend_api.*/%define php85_zend_api ${zend_api}/" "${MACROS_FILE}" 2>/dev/null || true
-        fi
+    if ! command -v php-config >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local extdir api zend_api
+    extdir="$(php-config --extension-dir 2>/dev/null || true)"
+    api="${extdir##*-}"
+    if [[ "${api}" =~ ^[0-9]{8}$ ]]; then
+        zend_api="4${api}"
+        log "Detected PHP API version: ${api} (zend ${zend_api})"
+        sed -i "s/%global php85_api.*/%global php85_api          ${api}/" "${MACROS_FILE}" 2>/dev/null || \
+            sed -i '' "s/%global php85_api.*/%global php85_api          ${api}/" "${MACROS_FILE}" 2>/dev/null || true
+        sed -i "s/%define php85_zend_api.*/%define php85_zend_api ${zend_api}/" "${MACROS_FILE}" 2>/dev/null || \
+            sed -i '' "s/%define php85_zend_api.*/%define php85_zend_api ${zend_api}/" "${MACROS_FILE}" 2>/dev/null || true
     fi
 }
 

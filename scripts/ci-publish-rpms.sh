@@ -130,7 +130,8 @@ apply_publish() {
 
     log "Regenerating createrepo metadata for ${ARCH} ($(find "${ARCH}" -maxdepth 1 -name '*.rpm' | wc -l | tr -d ' ') RPMs)"
     rm -rf "${ARCH}/repodata"
-    createrepo_c --general-compress-type xz "${ARCH}"
+    # Default gzip metadata — Photon tdnf/libsolv cannot read xz repodata (Solv I/O error).
+    createrepo_c "${ARCH}"
 
     cp "${PAGES_DIR}/CNAME" "${PAGES_DIR}/.nojekyll" "${PAGES_DIR}/photon-php.repo" "${PAGES_DIR}/index.html" .
     cp "${PAGES_DIR}/BRANCH-README.md" README.md

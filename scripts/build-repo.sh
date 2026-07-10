@@ -23,13 +23,14 @@ if [ ! -d "${REPO_DIR}" ] || [ -z "$(ls -A "${REPO_DIR}"/*.rpm 2>/dev/null)" ]; 
 fi
 
 log "Creating repository metadata in ${REPO_DIR}"
-createrepo_c --general-compress-type xz "${REPO_DIR}"
+# Default gzip metadata — Photon tdnf/libsolv cannot read xz repodata (Solv I/O error).
+createrepo_c "${REPO_DIR}"
 
 for arch_dir in "${OUTPUT_DIR}"/*/; do
     [ -d "${arch_dir}" ] || continue
     if ls "${arch_dir}"/*.rpm >/dev/null 2>&1; then
         log "Creating metadata for ${arch_dir}"
-        createrepo_c --general-compress-type xz "${arch_dir}"
+        createrepo_c "${arch_dir}"
     fi
 done
 

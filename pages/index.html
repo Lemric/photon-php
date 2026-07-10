@@ -19,10 +19,8 @@
   <p>Base URL: <code>https://pkgs.photon.lemric.com</code></p>
 
   <h2>Install</h2>
-  <pre>ARCH=$(uname -m)
-curl -fsSL https://pkgs.photon.lemric.com/photon-php.repo \
-  | sed "s|/x86_64|/${ARCH}|g" \
-  > /etc/yum.repos.d/photon-php.repo
+  <pre>curl -fsSL https://pkgs.photon.lemric.com/photon-php.repo \
+  -o /etc/yum.repos.d/photon-php.repo
 
 tdnf makecache
 tdnf install -y php85 php85-fpm php85-opcache</pre>

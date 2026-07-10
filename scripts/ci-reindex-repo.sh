@@ -102,7 +102,8 @@ apply_reindex() {
         fi
         log "Regenerating createrepo metadata for ${arch} ($(find "${arch}" -maxdepth 1 -name '*.rpm' | wc -l | tr -d ' ') RPMs)"
         rm -rf "${arch}/repodata"
-        createrepo_c --general-compress-type xz "${arch}"
+        # Default gzip metadata — Photon tdnf/libsolv cannot read xz repodata (Solv I/O error).
+        createrepo_c "${arch}"
         reindexed=1
     done
 
