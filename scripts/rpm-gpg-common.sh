@@ -10,8 +10,22 @@ rpm_gpg_enabled() {
     [ -n "${RPM_GPG_PRIVATE_KEY:-}" ] && [ -n "${RPM_GPG_KEY_ID:-}" ]
 }
 
+rpm_gpg_sign_rpms_enabled() {
+    [ "${RPM_GPG_SIGN_RPMS:-1}" = "1" ] && rpm_gpg_enabled
+}
+
+rpm_gpg_sign_metadata_enabled() {
+    [ "${RPM_GPG_SIGN_METADATA:-1}" = "1" ] && rpm_gpg_enabled
+}
+
 rpm_gpg_require_ci() {
-    if [ -n "${GITHUB_ACTIONS:-}" ] && ! rpm_gpg_enabled; then
+    if [ -z "${GITHUB_ACTIONS:-}" ]; then
+        return 0
+    fi
+    if rpm_gpg_enabled; then
+        return 0
+    fi
+    if [ "${RPM_GPG_SIGN_RPMS:-1}" = "1" ] || [ "${RPM_GPG_SIGN_METADATA:-1}" = "1" ]; then
         rpm_gpg_log "ERROR: CI requires RPM_GPG_PRIVATE_KEY and RPM_GPG_KEY_ID GitHub secrets" >&2
         rpm_gpg_log "See packaging/GPG.md for setup instructions" >&2
         exit 1
@@ -23,9 +37,11 @@ rpm_gpg_home() {
 }
 
 rpm_gpg_setup() {
-    if ! rpm_gpg_enabled; then
-        rpm_gpg_log "GPG signing disabled (no RPM_GPG_PRIVATE_KEY / RPM_GPG_KEY_ID)"
-        return 0
+    if ! rpm_gpg_sign_rpms_enabled; then
+        if ! rpm_gpg_sign_metadata_enabled; then
+            rpm_gpg_log "GPG signing disabled (no RPM_GPG_PRIVATE_KEY / RPM_GPG_KEY_ID)"
+            return 0
+        fi
     fi
 
     local gpg_home key_id macros_file passphrase_arg
@@ -58,11 +74,11 @@ EOF
 
     if [ -n "${RPM_GPG_PASSPHRASE:-}" ]; then
         cat >> "${macros_file}" <<EOF
-%__gpg_sign_cmd %{__gpg} gpg --homedir ${gpg_home} --batch --no-tty --pinentry-mode loopback --passphrase ${RPM_GPG_PASSPHRASE} --no-permission-warning -q -u ${key_id} -o %{__signature_filename} -s %{__plaintext_filename}
+%__gpg_sign_cmd %{__gpg} gpg --homedir ${gpg_home} --batch --no-tty --no-armor --digest-algo sha256 --pinentry-mode loopback --passphrase ${RPM_GPG_PASSPHRASE} --no-permission-warning -q -u ${key_id} -sbo %{__signature_filename} %{__plaintext_filename}
 EOF
     else
         cat >> "${macros_file}" <<EOF
-%__gpg_sign_cmd %{__gpg} gpg --homedir ${gpg_home} --batch --no-tty --pinentry-mode loopback --no-permission-warning -q -u ${key_id} -o %{__signature_filename} -s %{__plaintext_filename}
+%__gpg_sign_cmd %{__gpg} gpg --homedir ${gpg_home} --batch --no-tty --no-armor --digest-algo sha256 --pinentry-mode loopback --no-permission-warning -q -u ${key_id} -sbo %{__signature_filename} %{__plaintext_filename}
 EOF
     fi
 
@@ -80,7 +96,7 @@ rpm_gpg_is_signed() {
 rpm_gpg_sign_file() {
     local rpm="$1"
 
-    if ! rpm_gpg_enabled; then
+    if ! rpm_gpg_sign_rpms_enabled; then
         return 0
     fi
 
@@ -96,7 +112,7 @@ rpm_gpg_sign_file() {
 rpm_gpg_sign_directory() {
     local dir="$1" rpm
 
-    if ! rpm_gpg_enabled; then
+    if ! rpm_gpg_sign_rpms_enabled; then
         return 0
     fi
 
@@ -140,8 +156,12 @@ rpm_gpg_publish_public_key() {
     return 1
 }
 
+createrepo_supports_gpg_sign() {
+    createrepo_c --help 2>&1 | grep -q -- '--gpg-sign'
+}
+
 createrepo_gpg_args() {
-    if rpm_gpg_enabled; then
+    if rpm_gpg_sign_metadata_enabled && createrepo_supports_gpg_sign; then
         printf '%s\n' --gpg-sign "--gpg-key=${RPM_GPG_KEY_ID}"
     fi
 }

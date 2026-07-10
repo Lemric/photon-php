@@ -57,11 +57,6 @@ install_bootstrap_from_published
 
 seed_output_from_published
 
-# shellcheck source=rpm-gpg-common.sh
-source scripts/rpm-gpg-common.sh
-rpm_gpg_require_ci
-rpm_gpg_setup
-
 case "${STAGE}" in
     php)
         log "=== Building PHP ${PHP_VERSION:-8.5.8} ==="

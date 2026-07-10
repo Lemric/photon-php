@@ -28,15 +28,16 @@ if ! command -v createrepo_c >/dev/null 2>&1; then
 fi
 
 # Default gzip metadata — Photon tdnf/libsolv cannot read xz repodata (Solv I/O error).
-run_createrepo --update "${OUTPUT_DIR}" 2>/dev/null \
-    || run_createrepo "${OUTPUT_DIR}"
+# Local build repo never gpg-signs metadata (Photon's createrepo_c lacks --gpg-sign).
+RPM_GPG_SIGN_METADATA=0 run_createrepo --update "${OUTPUT_DIR}" 2>/dev/null \
+    || RPM_GPG_SIGN_METADATA=0 run_createrepo "${OUTPUT_DIR}"
 
 cat > "/etc/yum.repos.d/${REPO_ID}.repo" << EOF
 [${REPO_ID}]
 name=Photon PHP local build
 baseurl=file://${OUTPUT_DIR}
 enabled=1
-$(rpm_gpg_repo_file_snippet "file://${OUTPUT_DIR}")
+gpgcheck=0
 priority=1
 EOF
 
