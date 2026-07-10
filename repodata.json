@@ -5,7 +5,7 @@
   "php_version": "8.5.8",
   "architectures": {
     "x86_64": {
-      "package_count": 27,
+      "package_count": 28,
       "packages": [
         "libzip-1.11.4-1.photon5.x86_64.rpm",
         "libzip-devel-1.11.4-1.photon5.x86_64.rpm",
@@ -22,6 +22,7 @@
         "php85-mysqlnd-8.5.8-1.photon5.x86_64.rpm",
         "php85-opcache-8.5.8-1.photon5.x86_64.rpm",
         "php85-pcntl-8.5.8-1.photon5.x86_64.rpm",
+        "php85-pecl-apcu-5.1.24-1.photon5.x86_64.rpm",
         "php85-pecl-igbinary-3.2.17RC1-1.photon5.x86_64.rpm",
         "php85-pecl-igbinary-3.2.17RC1-2.photon5.x86_64.rpm",
         "php85-pecl-redis-6.3.0-1.photon5.x86_64.rpm",
@@ -51,6 +52,7 @@
         "php85-mysqlnd-8.5.8-1.photon5",
         "php85-opcache-8.5.8-1.photon5",
         "php85-pcntl-8.5.8-1.photon5",
+        "php85-pecl-apcu-5.1.24-1.photon5",
         "php85-pecl-igbinary-3.2.17RC1-1.photon5",
         "php85-pecl-igbinary-3.2.17RC1-2.photon5",
         "php85-pecl-redis-6.3.0-1.photon5",
@@ -64,11 +66,11 @@
         "rabbitmq-c-devel-0.14.0-1.photon5",
         "re2c-3.1-1.photon5"
       ],
-      "last_updated": "2026-07-10T08:20:25Z",
+      "last_updated": "2026-07-10T08:29:51Z",
       "last_stage": "reindex"
     },
     "aarch64": {
-      "package_count": 27,
+      "package_count": 28,
       "packages": [
         "libzip-1.11.4-1.photon5.aarch64.rpm",
         "libzip-devel-1.11.4-1.photon5.aarch64.rpm",
@@ -85,6 +87,7 @@
         "php85-mysqlnd-8.5.8-1.photon5.aarch64.rpm",
         "php85-opcache-8.5.8-1.photon5.aarch64.rpm",
         "php85-pcntl-8.5.8-1.photon5.aarch64.rpm",
+        "php85-pecl-apcu-5.1.24-1.photon5.aarch64.rpm",
         "php85-pecl-igbinary-3.2.17RC1-1.photon5.aarch64.rpm",
         "php85-pecl-igbinary-3.2.17RC1-2.photon5.aarch64.rpm",
         "php85-pecl-redis-6.3.0-1.photon5.aarch64.rpm",
@@ -114,6 +117,7 @@
         "php85-mysqlnd-8.5.8-1.photon5",
         "php85-opcache-8.5.8-1.photon5",
         "php85-pcntl-8.5.8-1.photon5",
+        "php85-pecl-apcu-5.1.24-1.photon5",
         "php85-pecl-igbinary-3.2.17RC1-1.photon5",
         "php85-pecl-igbinary-3.2.17RC1-2.photon5",
         "php85-pecl-redis-6.3.0-1.photon5",
@@ -127,7 +131,7 @@
         "rabbitmq-c-devel-0.14.0-1.photon5",
         "re2c-3.1-1.photon5"
       ],
-      "last_updated": "2026-07-10T08:20:25Z",
+      "last_updated": "2026-07-10T08:29:51Z",
       "last_stage": "reindex"
     }
   },
@@ -147,6 +151,7 @@
     "php85-mysqlnd-8.5.8-1.photon5",
     "php85-opcache-8.5.8-1.photon5",
     "php85-pcntl-8.5.8-1.photon5",
+    "php85-pecl-apcu-5.1.24-1.photon5",
     "php85-pecl-igbinary-3.2.17RC1-1.photon5",
     "php85-pecl-igbinary-3.2.17RC1-2.photon5",
     "php85-pecl-redis-6.3.0-1.photon5",
@@ -160,11 +165,11 @@
     "rabbitmq-c-devel-0.14.0-1.photon5",
     "re2c-3.1-1.photon5"
   ],
-  "updated": "2026-07-10T08:20:25Z",
-  "commit": "841e0886f043ce1e0ad6124b1e4f71dd77196c55",
+  "updated": "2026-07-10T08:29:51Z",
+  "commit": "3a4322c6031ec3357da44661c853d8582a66f99b",
   "last_publish": {
     "arch": "all",
     "stage": "reindex",
-    "updated": "2026-07-10T08:20:25Z"
+    "updated": "2026-07-10T08:29:51Z"
   }
 }
