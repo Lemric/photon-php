@@ -3,7 +3,7 @@
 %define php85_extname xdebug
 
 Name:           php85-pecl-xdebug
-Version:        3.4.2
+Version:        3.5.0
 Release:        1%{?dist}
 Summary:        PHP %{php85_ver} Xdebug debugger extension (PECL, development only)
 License:        PHP-3.01
@@ -58,5 +58,8 @@ find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 %config(noreplace) %{php85_extdir}/99-xdebug.ini
 
 %changelog
+* Fri Jul 10 2026 Photon PHP Build <build@photon-php.local> - 3.5.0-1
+- Upgrade for PHP 8.5 support
+
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 3.4.2-1
 - Initial Xdebug PECL build for PHP 8.5 on Photon OS (development)

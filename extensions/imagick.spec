@@ -3,7 +3,7 @@
 %define php85_extname imagick
 
 Name:           php85-pecl-imagick
-Version:        3.7.0
+Version:        3.8.1
 Release:        1%{?dist}
 Summary:        PHP %{php85_ver} ImageMagick extension (PECL)
 License:        PHP-3.01
@@ -53,5 +53,8 @@ find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 %config(noreplace) %{php85_extdir}/30-imagick.ini
 
 %changelog
+* Fri Jul 10 2026 Photon PHP Build <build@photon-php.local> - 3.8.1-1
+- Upgrade for PHP 8.5 (php_smart_string.h removed upstream)
+
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 3.7.0-1
 - Initial imagick PECL build for PHP 8.5 on Photon OS
