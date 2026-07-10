@@ -24,7 +24,7 @@ RUN chmod +x /usr/local/bin/install-php-rpms.sh \
 FROM photon-base AS base
 
 LABEL org.opencontainers.image.title="PHP 8.5 base (Photon OS)" \
-      org.opencontainers.image.description="PHP 8.5 core modules without CLI or FPM SAPI"
+      org.opencontainers.image.description="PHP 8.5 core modules with CLI (RPM deps); add FPM target for php-fpm"
 
 WORKDIR /var/www/html
 
@@ -44,6 +44,9 @@ LABEL org.opencontainers.image.title="PHP 8.5 FPM (Photon OS)" \
       org.opencontainers.image.description="PHP 8.5 FastCGI Process Manager built from native Photon OS RPMs"
 
 RUN install-php-rpms.sh fpm
+
+COPY php-fpm-docker.conf /etc/php85/php-fpm.d/zz-docker.conf
+RUN sed -i '/^listen\.allowed_clients/d' /etc/php85/php-fpm.d/www.conf
 
 WORKDIR /var/www/html
 EXPOSE 9000

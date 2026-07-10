@@ -6,10 +6,12 @@ PHP 8.5 container images for **VMware Photon OS 5.x** (`photon:5.0`), built from
 
 | Image | Description | Default command |
 |-------|-------------|-----------------|
-| `ghcr.io/lemric/php85-photon-base` | Core PHP modules (no SAPI) | — |
+| `ghcr.io/lemric/php85-photon-base` | Core modules + CLI (RPM Requires chain) | `php` |
 | `ghcr.io/lemric/php85-photon-cli` | PHP CLI | `php` |
 | `ghcr.io/lemric/php85-photon-fpm` | PHP-FPM (+ CLI, required by RPM deps) | `php-fpm -F` |
 | `ghcr.io/lemric/php85-photon` | Legacy alias → FPM | `php-fpm -F` |
+
+Nginx (reverse proxy) lives in `docker/8.5/photon/nginx/` — see [Nginx + FPM](#nginx--fpm) below.
 
 Tags: `8.5.8`, `latest`, plus per-arch tags (`8.5.8-x86_64`, …).
 
@@ -54,6 +56,42 @@ docker run -d --name php-fpm -p 9000:9000 ghcr.io/lemric/php85-photon-fpm:8.5.8
 ```
 
 PHP binaries and configuration use RPM paths (`/usr/bin/php`, `/etc/php85/`).
+
+## Nginx + FPM
+
+The FPM image exposes port **9000** only. Use a separate nginx container as reverse proxy.
+
+```bash
+cd docker/8.5/photon
+docker compose up --build
+# http://localhost:8080
+```
+
+### Nginx `Permission denied` on `/etc/nginx/client_body_temp`
+
+This happens when nginx runs as **non-root** (Kubernetes `runAsNonRoot`, `nginxinc/nginx-unprivileged`, etc.) but the config still has:
+
+- `user nginx;` at the top level (ignored without root — harmless warning)
+- temp paths under `/etc/nginx/` (not writable)
+
+**Fix:** point temp directories to `/tmp` or `/var/cache/nginx` and drop the `user` directive:
+
+```nginx
+pid /tmp/nginx.pid;
+
+http {
+    client_body_temp_path /tmp/nginx/client_body;
+    proxy_temp_path /tmp/nginx/proxy;
+    fastcgi_temp_path /tmp/nginx/fastcgi;
+    # ...
+}
+```
+
+Use the provided `docker/8.5/photon/nginx/nginx.conf` or base image `nginxinc/nginx-unprivileged`.
+
+### FPM rejects nginx (`Connection refused` / timeout)
+
+Default RPM pool `www.conf` sets `listen.allowed_clients = 127.0.0.1`. The FPM Docker image removes this via `php-fpm-docker.conf` so nginx in another container can connect on `php-fpm:9000`.
 
 ## RPM vs source-compile Docker
 
