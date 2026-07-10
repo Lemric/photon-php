@@ -2,6 +2,9 @@
 # Rebuild when scripts/install-build-deps.sh changes.
 FROM photon:5.0
 
+# RPM scriptlets (e.g. postgresql18-server %prein) need unshare; buildx lacks it.
+ENV CI_DOCKER_IMAGE_BUILD=1
+
 WORKDIR /build
 
 COPY scripts/install-build-deps.sh /tmp/install-build-deps.sh
