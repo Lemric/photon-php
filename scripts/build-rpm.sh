@@ -69,6 +69,24 @@ rabbitmq_c_installed() {
     rpm -q rabbitmq-c-devel >/dev/null 2>&1
 }
 
+igbinary_build_headers_installed() {
+    test -f /usr/include/php85/php/ext/igbinary/igbinary.h
+}
+
+ensure_igbinary() {
+    if igbinary_build_headers_installed; then
+        log "php85-pecl-igbinary headers already installed"
+        return 0
+    fi
+    if [ -n "$(binary_rpms_in_output "php85-pecl-igbinary-*.${ARCH}.rpm")" ]; then
+        log "Installing pre-built php85-pecl-igbinary from ${OUTPUT_DIR}"
+        install_from_local_repo php85-pecl-igbinary
+        igbinary_build_headers_installed && return 0
+    fi
+    log "ERROR: php85-pecl-igbinary with headers required before building redis" >&2
+    return 1
+}
+
 php85_devel_installed() {
     rpm -q php85-devel >/dev/null 2>&1
 }
@@ -315,6 +333,9 @@ build_single_extension() {
     ensure_php
     if [ "${ext}" = amqp ]; then
         ensure_rabbitmq_c
+    fi
+    if [ "${ext}" = redis ]; then
+        ensure_igbinary
     fi
     if [ "${ext}" = imagick ] && ! imagick_build_available; then
         log "Skipping imagick — ImageMagick-devel not available on this platform"

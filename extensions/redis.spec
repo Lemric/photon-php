@@ -11,6 +11,7 @@ URL:            https://pecl.php.net/package/redis
 Source0:        https://pecl.php.net/get/redis-%{version}.tgz
 
 BuildRequires:  php85-devel = %{php85_ver}
+BuildRequires:  php85-pecl-igbinary
 BuildRequires:  gcc
 BuildRequires:  make
 BuildRequires:  autoconf
