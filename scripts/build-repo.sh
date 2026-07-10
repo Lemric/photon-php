@@ -5,6 +5,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# shellcheck source=rpm-gpg-common.sh
+source "${SCRIPT_DIR}/rpm-gpg-common.sh"
+
 ARCH="${ARCH:-$(uname -m)}"
 REPO_DIR="${REPO_DIR:-${PROJECT_ROOT}/repo/${ARCH}}"
 OUTPUT_DIR="${OUTPUT_DIR:-${PROJECT_ROOT}/repo}"
@@ -23,14 +26,17 @@ if [ ! -d "${REPO_DIR}" ] || [ -z "$(ls -A "${REPO_DIR}"/*.rpm 2>/dev/null)" ]; 
 fi
 
 log "Creating repository metadata in ${REPO_DIR}"
+rpm_gpg_setup
+rpm_gpg_sign_directory "${REPO_DIR}"
 # Default gzip metadata — Photon tdnf/libsolv cannot read xz repodata (Solv I/O error).
-createrepo_c "${REPO_DIR}"
+run_createrepo "${REPO_DIR}"
 
 for arch_dir in "${OUTPUT_DIR}"/*/; do
     [ -d "${arch_dir}" ] || continue
     if ls "${arch_dir}"/*.rpm >/dev/null 2>&1; then
         log "Creating metadata for ${arch_dir}"
-        createrepo_c "${arch_dir}"
+        rpm_gpg_sign_directory "${arch_dir}"
+        run_createrepo "${arch_dir}"
     fi
 done
 
@@ -60,5 +66,5 @@ echo "  [photon-php]"
 echo "  name=Photon PHP 8.5"
 echo "  baseurl=${REPO_BASEURL}/${ARCH}"
 echo "  enabled=1"
-echo "  gpgcheck=0"
+rpm_gpg_repo_file_snippet "${REPO_BASEURL}/\${ARCH}" "${REPO_BASEURL}/${RPM_GPG_KEY_FILE_NAME}"
 echo ""

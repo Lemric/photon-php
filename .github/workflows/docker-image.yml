@@ -110,7 +110,14 @@ jobs:
 
           mkdir -p docker/8.5/photon/rpm/repo
           cp -a "published/${{ matrix.arch }}"/*.rpm docker/8.5/photon/rpm/repo/
-          cp -a "published/${{ matrix.arch }}/repodata" docker/8.5/photon/rpm/repo/repodata
+          if [ -f published/RPM-GPG-KEY-photon-php ]; then
+            cp -a published/RPM-GPG-KEY-photon-php docker/8.5/photon/rpm/RPM-GPG-KEY-photon-php
+          elif [ -f pages/RPM-GPG-KEY-photon-php ]; then
+            cp -a pages/RPM-GPG-KEY-photon-php docker/8.5/photon/rpm/RPM-GPG-KEY-photon-php
+          else
+            echo "ERROR: RPM-GPG-KEY-photon-php not found on gh-pages or in pages/" >&2
+            exit 1
+          fi
 
       - name: Build image from published RPMs
         run: |

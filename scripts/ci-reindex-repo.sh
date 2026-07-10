@@ -13,6 +13,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PAGES_DIR="${PROJECT_ROOT}/pages"
 
+# shellcheck source=rpm-gpg-common.sh
+source "${SCRIPT_DIR}/rpm-gpg-common.sh"
+
 log() { echo "[ci-reindex] $*"; }
 
 if ! command -v createrepo_c >/dev/null 2>&1; then
@@ -95,6 +98,10 @@ PY
 apply_reindex() {
     local arch reindexed=0
 
+    if [ -n "${GITHUB_ACTIONS:-}" ]; then
+        "${SCRIPT_DIR}/ci-gpg-host-setup.sh"
+    fi
+
     # shellcheck source=ci-prune-rpms.sh
     source "${SCRIPT_DIR}/ci-prune-rpms.sh"
 
@@ -104,10 +111,11 @@ apply_reindex() {
             continue
         fi
         prune_arch_duplicates "${arch}"
+        rpm_gpg_sign_directory "${arch}"
         log "Regenerating createrepo metadata for ${arch} ($(find "${arch}" -maxdepth 1 -name '*.rpm' | wc -l | tr -d ' ') RPMs)"
         rm -rf "${arch}/repodata"
         # Default gzip metadata — Photon tdnf/libsolv cannot read xz repodata (Solv I/O error).
-        createrepo_c "${arch}"
+        run_createrepo "${arch}"
         reindexed=1
     done
 
@@ -118,6 +126,7 @@ apply_reindex() {
 
     cp "${PAGES_DIR}/CNAME" "${PAGES_DIR}/.nojekyll" "${PAGES_DIR}/photon-php.repo" "${PAGES_DIR}/index.html" .
     cp "${PAGES_DIR}/BRANCH-README.md" README.md
+    rpm_gpg_publish_public_key "." "${PAGES_DIR}/${RPM_GPG_KEY_FILE_NAME}" || true
     sed -i "s/@PHP_VERSION@/${PHP_VERSION}/g" index.html
     sed -i "s|@GITHUB_REPOSITORY@|${GITHUB_REPOSITORY}|g" index.html
     generate_repodata_json

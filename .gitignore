@@ -5,7 +5,7 @@ repo/*/
 !repo/README.md
 *.rpm
 *.src.rpm
-
+packaging/photon-php-signing.key
 # macOS
 .DS_Store
 

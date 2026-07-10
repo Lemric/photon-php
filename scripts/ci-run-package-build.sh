@@ -33,6 +33,14 @@ docker_args=(
     -e "PHP_VERSION=${PHP_VERSION:-8.5.8}"
 )
 
+if [ -n "${RPM_GPG_PRIVATE_KEY:-}" ]; then
+    docker_args+=(
+        -e "RPM_GPG_PRIVATE_KEY=${RPM_GPG_PRIVATE_KEY}"
+        -e "RPM_GPG_KEY_ID=${RPM_GPG_KEY_ID:-}"
+        -e "RPM_GPG_PASSPHRASE=${RPM_GPG_PASSPHRASE:-}"
+    )
+fi
+
 if [ "${GROUP}" = "php" ]; then
     if [ ! -d "${WORKSPACE}/published/${ARCH}" ]; then
         log "ERROR: published/${ARCH} not found — checkout gh-pages before PHP builds" >&2

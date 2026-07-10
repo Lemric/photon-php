@@ -42,6 +42,13 @@ on:
         required: false
         type: boolean
         default: false
+    secrets:
+      RPM_GPG_PRIVATE_KEY:
+        required: false
+      RPM_GPG_KEY_ID:
+        required: false
+      RPM_GPG_PASSPHRASE:
+        required: false
 
 permissions:
   contents: write
@@ -53,6 +60,9 @@ env:
   REPO_BASEURL: https://pkgs.photon.lemric.com
   PUBLISH_BRANCH: ${{ inputs.publish_branch }}
   CI_FORCE_BUILD: ${{ inputs.force_build }}
+  RPM_GPG_PRIVATE_KEY: ${{ secrets.RPM_GPG_PRIVATE_KEY }}
+  RPM_GPG_KEY_ID: ${{ secrets.RPM_GPG_KEY_ID }}
+  RPM_GPG_PASSPHRASE: ${{ secrets.RPM_GPG_PASSPHRASE }}
 
 jobs:
   plan:
@@ -551,6 +561,7 @@ jobs:
           path: published
           sparse-checkout: |
             ${{ matrix.arch }}
+            RPM-GPG-KEY-photon-php
           sparse-checkout-cone-mode: false
 
       - name: Test installation and functionality
@@ -561,28 +572,25 @@ jobs:
             echo "PHP packages not published yet for ${{ matrix.arch }} — skipping"
             exit 0
           fi
+          if [ ! -f published/RPM-GPG-KEY-photon-php ]; then
+            echo "ERROR: RPM-GPG-KEY-photon-php missing on gh-pages — run reindex after configuring GPG secrets" >&2
+            exit 1
+          fi
 
           docker run --privileged --rm \
             --platform ${{ matrix.platform }} \
             -v "${{ github.workspace }}/published/${{ matrix.arch }}:/repo:ro" \
+            -v "${{ github.workspace }}/published/RPM-GPG-KEY-photon-php:/etc/pki/rpm-gpg/RPM-GPG-KEY-photon-php:ro" \
             photon:${{ env.PHOTON_VERSION }} \
             bash -c "
               set -euo pipefail
 
               tdnf install -y rpm shadow
+              rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-photon-php
 
               pick_latest() { ls -1 /repo/\$1 2>/dev/null | sort -V | tail -1; }
 
-              rpm -Uvh --replacepkgs /repo/libzip-[0-9]*.rpm /repo/rabbitmq-c-[0-9]*.rpm
-              rpm -Uvh --replacepkgs \
-                /repo/php85-common-*.rpm /repo/php85-cli-*.rpm /repo/php85-fpm-*.rpm \
-                /repo/php85-opcache-*.rpm /repo/php85-mbstring-*.rpm /repo/php85-intl-*.rpm \
-                /repo/php85-xml-*.rpm /repo/php85-curl-*.rpm /repo/php85-gd-*.rpm \
-                /repo/php85-zip-*.rpm /repo/php85-bcmath-*.rpm /repo/php85-mysqlnd-*.rpm \
-                /repo/php85-pgsql-*.rpm /repo/php85-8*.rpm \
-                \"\$(pick_latest 'php85-pecl-redis-*.rpm')\" \
-                \"\$(pick_latest 'php85-pecl-igbinary-*.rpm')\" 2>/dev/null \
-              || tdnf install -y /repo/libzip-[0-9]*.rpm /repo/rabbitmq-c-[0-9]*.rpm \
+              tdnf install -y /repo/libzip-[0-9]*.rpm /repo/rabbitmq-c-[0-9]*.rpm \
                 /repo/php85-common-*.rpm /repo/php85-cli-*.rpm /repo/php85-fpm-*.rpm \
                 /repo/php85-opcache-*.rpm /repo/php85-mbstring-*.rpm /repo/php85-intl-*.rpm \
                 /repo/php85-xml-*.rpm /repo/php85-curl-*.rpm /repo/php85-gd-*.rpm \

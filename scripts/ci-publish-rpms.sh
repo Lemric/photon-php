@@ -25,6 +25,9 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SOURCE_DIR="$(cd "${SOURCE_DIR}" && pwd)"
 PAGES_DIR="${PROJECT_ROOT}/pages"
 
+# shellcheck source=rpm-gpg-common.sh
+source "${SCRIPT_DIR}/rpm-gpg-common.sh"
+
 log() { echo "[ci-publish] $*"; }
 
 if ! ls "${SOURCE_DIR}"/*.rpm >/dev/null 2>&1; then
@@ -123,8 +126,15 @@ apply_publish() {
     # shellcheck source=ci-prune-rpms.sh
     source "${SCRIPT_DIR}/ci-prune-rpms.sh"
     prune_before_publish "${ARCH}" "${SOURCE_DIR}"
+
+    if [ -n "${GITHUB_ACTIONS:-}" ] && [ -n "${RPM_GPG_PRIVATE_KEY:-}" ]; then
+        "${SCRIPT_DIR}/ci-gpg-host-setup.sh"
+    fi
+
+    rpm_gpg_sign_directory "${SOURCE_DIR}"
     cp -a "${SOURCE_DIR}"/*.rpm "${ARCH}/"
     find "${ARCH}" -maxdepth 1 -name '*.src.rpm' -delete 2>/dev/null || true
+    rpm_gpg_sign_directory "${ARCH}"
 
     if [ "${RPMS_ONLY}" -eq 1 ]; then
         log "Copied RPMs to ${ARCH} (index rebuild deferred)"
@@ -134,10 +144,11 @@ apply_publish() {
     log "Regenerating createrepo metadata for ${ARCH} ($(find "${ARCH}" -maxdepth 1 -name '*.rpm' | wc -l | tr -d ' ') RPMs)"
     rm -rf "${ARCH}/repodata"
     # Default gzip metadata — Photon tdnf/libsolv cannot read xz repodata (Solv I/O error).
-    createrepo_c "${ARCH}"
+    run_createrepo "${ARCH}"
 
     cp "${PAGES_DIR}/CNAME" "${PAGES_DIR}/.nojekyll" "${PAGES_DIR}/photon-php.repo" "${PAGES_DIR}/index.html" .
     cp "${PAGES_DIR}/BRANCH-README.md" README.md
+    rpm_gpg_publish_public_key "." "${PAGES_DIR}/${RPM_GPG_KEY_FILE_NAME}" || true
     sed -i "s/@PHP_VERSION@/${PHP_VERSION}/g" index.html
     sed -i "s|@GITHUB_REPOSITORY@|${GITHUB_REPOSITORY}|g" index.html
 

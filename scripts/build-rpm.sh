@@ -13,6 +13,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# shellcheck source=rpm-gpg-common.sh
+source "${SCRIPT_DIR}/rpm-gpg-common.sh"
+
 PHP_VERSION="${PHP_VERSION:-8.5.8}"
 ARCH="${ARCH:-$(uname -m)}"
 DIST="${DIST:-photon5}"
@@ -229,6 +232,12 @@ build_spec() {
         -exec cp -f {} "${OUTPUT_DIR}/" \;
     find "${RPMBUILD_DIR}/SRPMS" -name '*.src.rpm' -exec cp -f {} "${OUTPUT_DIR}/" \; 2>/dev/null || true
 
+    shopt -s nullglob
+    for _signed_rpm in "${OUTPUT_DIR}"/*.rpm; do
+        [[ "${_signed_rpm}" == *.src.rpm ]] && continue
+        rpm_gpg_sign_file "${_signed_rpm}"
+    done
+
     refresh_local_repo
 }
 
@@ -396,6 +405,8 @@ run_stage() {
 
 main() {
     setup_rpmbuild
+    rpm_gpg_require_ci
+    rpm_gpg_setup
 
     case "${TARGET}" in
         re2c) run_stage re2c ;;
