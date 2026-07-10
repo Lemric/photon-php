@@ -1,64 +1,66 @@
 # Docker images
 
-Docker images compile PHP 8.5.8 from php.net sources following the [docker-library/php](https://github.com/docker-library/php) Alpine layout — minimal `tdnf` footprint, source compile, build-deps cleanup, `/usr/local` install path, and `docker-php-*` helper scripts.
+PHP 8.5 container images for **VMware Photon OS 5.x** (`photon:5.0`), built from GPG-signed RPMs published by CI.
 
-Base image: **VMware Photon OS 5.x** (`photon:5.0`).
+## Published images (GHCR)
 
-## Why Docker is fast vs RPM CI
+| Image | Description | Default command |
+|-------|-------------|-----------------|
+| `ghcr.io/lemric/php85-photon-base` | Core PHP modules (no SAPI) | — |
+| `ghcr.io/lemric/php85-photon-cli` | PHP CLI | `php` |
+| `ghcr.io/lemric/php85-photon-fpm` | PHP-FPM | `php-fpm -F` |
+| `ghcr.io/lemric/php85-photon` | Legacy alias → FPM | `php-fpm -F` |
 
-| | Docker (this directory) | RPM (`scripts/install-build-deps.sh`) |
-|---|---|---|
-| Goal | Runnable PHP container | `tdnf install php85` packages |
-| Package install | ~15 devel headers, then removed | ~500 MB toolchain + rpm-build + llvm + postgresql + … |
-| PHP build | Single `configure && make install` | re2c RPM → libzip RPM → php85 RPM → PECL RPMs |
-| Typical CI time | ~5–15 min | ~30–60+ min |
-
-RPM builds are slow because Photon OS has no `re2c >= 3`, `libzip-devel`, or `rabbitmq-c-devel` — everything must be bootstrapped through `rpmbuild`. Docker skips RPM entirely and compiles PHP directly, exactly like [Alpine 3.23 CLI](https://github.com/docker-library/php/blob/master/8.5/alpine3.23/cli/Dockerfile).
+Tags: `8.5.8`, `latest`, plus per-arch tags (`8.5.8-x86_64`, …).
 
 ## Structure
 
 ```
-docker/8.5/photon/
-├── common/          # shared docker-php-* scripts
-├── cli/Dockerfile   # PHP CLI + phpdbg + embed
-└── fpm/Dockerfile   # PHP-FPM (production)
+docker/8.5/photon/rpm/
+├── Dockerfile            # multi-stage: base, cli, fpm
+├── install-php-rpms.sh   # shared RPM install logic
+├── repo/                 # populated at CI build time from gh-pages
+└── RPM-GPG-KEY-photon-php
+
+docker/8.5/photon/cli/    # legacy: compile from php.net sources
+docker/8.5/photon/fpm/    # legacy: compile from php.net sources
 ```
 
-## Build
+Production images use **`rpm/`** (native RPM packages, fast CI). The `cli/` and `fpm/` source-compile Dockerfiles remain for local development without a published repo.
+
+## Local build
 
 ```bash
-# from repository root
-docker build -f docker/8.5/photon/cli/Dockerfile -t php:8.5.8-cli-photon docker/8.5/photon
-docker build -f docker/8.5/photon/fpm/Dockerfile -t php:8.5.8-fpm-photon docker/8.5/photon
+# Copy RPMs from gh-pages checkout into repo/
+cp /path/to/gh-pages/x86_64/*.rpm docker/8.5/photon/rpm/repo/
+cp /path/to/gh-pages/RPM-GPG-KEY-photon-php docker/8.5/photon/rpm/
+
+docker build --target cli -f docker/8.5/photon/rpm/Dockerfile \
+  -t php:8.5.8-cli-photon docker/8.5/photon/rpm
+
+docker build --target fpm -f docker/8.5/photon/rpm/Dockerfile \
+  -t php:8.5.8-fpm-photon docker/8.5/photon/rpm
 ```
 
 ## Usage
 
 ```bash
-docker run --rm -it php:8.5.8-cli-photon php -v
-docker run -d --name php-fpm -p 9000:9000 php:8.5.8-fpm-photon
-docker run --rm php:8.5.8-cli-photon docker-php-ext-install pdo_mysql gd
+# CLI
+docker run --rm -it ghcr.io/lemric/php85-photon-cli:8.5.8 php -v
+docker run --rm ghcr.io/lemric/php85-photon-cli:8.5.8 php script.php
+
+# FPM
+docker run -d --name php-fpm -p 9000:9000 ghcr.io/lemric/php85-photon-fpm:8.5.8
 ```
 
-Extensions such as `gd` and `intl` are **not** baked into the base image (same as Alpine). Install them at runtime with `docker-php-ext-install`.
+PHP binaries and configuration use RPM paths (`/usr/bin/php`, `/etc/php85/`).
 
-## `docker-php-*` scripts
+## RPM vs source-compile Docker
 
-| Script | Description |
-|--------|-------------|
-| `docker-php-entrypoint` | Entrypoint — forwards flags to `php` |
-| `docker-php-source` | Extract/delete PHP source tarball |
-| `docker-php-ensure-re2c` | Build re2c 3.x when Photon repos only ship 1.x |
-| `docker-php-build` | Compile PHP from source and remove build deps |
-| `docker-php-ext-configure` | Run `./configure` for an extension |
-| `docker-php-ext-install` | Compile and install extensions |
-| `docker-php-ext-enable` | Enable a `.so` module in `conf.d` |
-
-## RPM vs Docker
-
-| | RPM (`tdnf`) | Docker |
+| | `rpm/` (CI) | `cli/` + `fpm/` (legacy) |
 |---|---|---|
-| Distribution | https://pkgs.photon.lemric.com | Container image |
-| PHP binary | `/usr/bin/php` | `/usr/local/bin/php` |
-| Configuration | `/etc/php85/` | `/usr/local/etc/php/` |
-| Extensions | Separate RPMs | `docker-php-ext-install` |
+| PHP source | Published RPMs | Compiled from php.net |
+| Binary path | `/usr/bin/php` | `/usr/local/bin/php` |
+| Config | `/etc/php85/` | `/usr/local/etc/php/` |
+| Extensions | Pre-built RPMs (redis, igbinary, …) | `docker-php-ext-install` |
+| CI trigger | After RPM publish | Manual only |

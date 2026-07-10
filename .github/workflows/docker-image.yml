@@ -66,7 +66,7 @@ jobs:
     name: Docker PHP 8.5 (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     needs: gate
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -119,36 +119,113 @@ jobs:
             exit 1
           fi
 
-      - name: Build image from published RPMs
+      - name: Build images from published RPMs
         run: |
-          docker build \
-            --platform ${{ matrix.platform }} \
-            --build-arg PHOTON_VERSION=${{ env.PHOTON_VERSION }} \
-            -f docker/8.5/photon/rpm/Dockerfile \
-            -t "php:${{ steps.meta.outputs.php_version }}-photon-${{ matrix.arch }}" \
-            docker/8.5/photon/rpm
+          set -euo pipefail
+          VERSION="${{ steps.meta.outputs.php_version }}"
+          ARCH="${{ matrix.arch }}"
+          CONTEXT="docker/8.5/photon/rpm"
 
-      - name: Smoke-test image
+          for target in base cli fpm; do
+            docker build \
+              --platform ${{ matrix.platform }} \
+              --build-arg PHOTON_VERSION=${{ env.PHOTON_VERSION }} \
+              --target "${target}" \
+              -f "${CONTEXT}/Dockerfile" \
+              -t "php:${VERSION}-${target}-photon-${ARCH}" \
+              "${CONTEXT}"
+          done
+
+      - name: Smoke-test images
         run: |
-          docker run --rm --platform ${{ matrix.platform }} \
-            "php:${{ steps.meta.outputs.php_version }}-photon-${{ matrix.arch }}" php -v
-          docker run --rm --platform ${{ matrix.platform }} \
-            "php:${{ steps.meta.outputs.php_version }}-photon-${{ matrix.arch }}" php -m
+          set -euo pipefail
+          VERSION="${{ steps.meta.outputs.php_version }}"
+          ARCH="${{ matrix.arch }}"
 
-      - name: Push image to GHCR
+          docker run --rm --platform ${{ matrix.platform }} \
+            "php:${VERSION}-cli-photon-${ARCH}" php -v
+          docker run --rm --platform ${{ matrix.platform }} \
+            "php:${VERSION}-cli-photon-${ARCH}" php -m
+
+          docker run --rm --platform ${{ matrix.platform }} \
+            "php:${VERSION}-fpm-photon-${ARCH}" php-fpm -t
+
+      - name: Push images to GHCR
         if: |
           (github.event_name == 'workflow_run') ||
           (github.event_name == 'workflow_dispatch' && inputs.push_image)
         run: |
+          set -euo pipefail
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          IMAGE="ghcr.io/${{ github.repository_owner }}/php85-photon"
-          IMAGE="$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')"
-          docker tag "php:${{ steps.meta.outputs.php_version }}-photon-${{ matrix.arch }}" \
-            "$IMAGE:${{ steps.meta.outputs.php_version }}-${{ matrix.arch }}"
-          docker push "$IMAGE:${{ steps.meta.outputs.php_version }}-${{ matrix.arch }}"
+          VERSION="${{ steps.meta.outputs.php_version }}"
+          ARCH="${{ matrix.arch }}"
+          OWNER="$(echo 'ghcr.io/${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+
+          for target in base cli fpm; do
+            IMAGE="${OWNER}/php85-photon-${target}"
+            docker tag "php:${VERSION}-${target}-photon-${ARCH}" \
+              "${IMAGE}:${VERSION}-${ARCH}"
+            docker push "${IMAGE}:${VERSION}-${ARCH}"
+          done
+
+          # Backward compatibility: php85-photon without suffix points to FPM.
+          LEGACY="${OWNER}/php85-photon"
+          docker tag "php:${VERSION}-fpm-photon-${ARCH}" "${LEGACY}:${VERSION}-${ARCH}"
+          docker push "${LEGACY}:${VERSION}-${ARCH}"
 
   docker-manifest:
-    name: Multi-arch manifest
+    name: Multi-arch manifest (${{ matrix.variant }})
+    runs-on: ubuntu-latest
+    needs: [gate, docker-image]
+    if: |
+      needs.docker-image.result == 'success' &&
+      ((github.event_name == 'workflow_run') ||
+       (github.event_name == 'workflow_dispatch' && inputs.push_image))
+    strategy:
+      matrix:
+        variant: [base, cli, fpm]
+    steps:
+      - name: Checkout published RPM repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PUBLISH_BRANCH }}
+          path: published
+
+      - name: Resolve PHP version
+        id: meta
+        run: |
+          set -euo pipefail
+          if [ -n "${{ github.event.inputs.php_version }}" ]; then
+            PHP_VERSION="${{ github.event.inputs.php_version }}"
+          elif [ -f published/repodata.json ]; then
+            PHP_VERSION="$(python3 -c "import json; print(json.load(open('published/repodata.json'))['php_version'])")"
+          else
+            echo "ERROR: cannot determine PHP version" >&2
+            exit 1
+          fi
+          echo "php_version=${PHP_VERSION}" >> "${GITHUB_OUTPUT}"
+
+      - name: Create and push manifest
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          OWNER="$(echo 'ghcr.io/${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          VERSION="${{ steps.meta.outputs.php_version }}"
+          VARIANT="${{ matrix.variant }}"
+          IMAGE="${OWNER}/php85-photon-${VARIANT}"
+
+          docker manifest create "${IMAGE}:${VERSION}" \
+            "${IMAGE}:${VERSION}-x86_64" \
+            "${IMAGE}:${VERSION}-aarch64"
+          docker manifest push "${IMAGE}:${VERSION}"
+
+          docker manifest create "${IMAGE}:latest" \
+            "${IMAGE}:${VERSION}-x86_64" \
+            "${IMAGE}:${VERSION}-aarch64"
+          docker manifest push "${IMAGE}:latest"
+
+  docker-manifest-legacy:
+    name: Multi-arch manifest (legacy php85-photon)
     runs-on: ubuntu-latest
     needs: [gate, docker-image]
     if: |
@@ -176,17 +253,19 @@ jobs:
           fi
           echo "php_version=${PHP_VERSION}" >> "${GITHUB_OUTPUT}"
 
-      - name: Create and push manifest
+      - name: Create and push legacy manifest
         run: |
+          set -euo pipefail
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          IMAGE="ghcr.io/${{ github.repository_owner }}/php85-photon"
-          IMAGE="$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')"
+          IMAGE="$(echo 'ghcr.io/${{ github.repository_owner }}/php85-photon' | tr '[:upper:]' '[:lower:]')"
           VERSION="${{ steps.meta.outputs.php_version }}"
-          docker manifest create "$IMAGE:${VERSION}" \
-            "$IMAGE:${VERSION}-x86_64" \
-            "$IMAGE:${VERSION}-aarch64"
-          docker manifest push "$IMAGE:${VERSION}"
-          docker manifest create "$IMAGE:latest" \
-            "$IMAGE:${VERSION}-x86_64" \
-            "$IMAGE:${VERSION}-aarch64"
-          docker manifest push "$IMAGE:latest"
+
+          docker manifest create "${IMAGE}:${VERSION}" \
+            "${IMAGE}:${VERSION}-x86_64" \
+            "${IMAGE}:${VERSION}-aarch64"
+          docker manifest push "${IMAGE}:${VERSION}"
+
+          docker manifest create "${IMAGE}:latest" \
+            "${IMAGE}:${VERSION}-x86_64" \
+            "${IMAGE}:${VERSION}-aarch64"
+          docker manifest push "${IMAGE}:latest"

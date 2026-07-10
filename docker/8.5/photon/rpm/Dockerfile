@@ -1,46 +1,51 @@
 # PHP 8.5 on VMware Photon OS 5.x — built from GPG-signed RPMs from CI.
-# Build context: ./repo (RPMs) and ./RPM-GPG-KEY-photon-php (public key).
+# Build context: ./repo (RPMs), ./RPM-GPG-KEY-photon-php, install-php-rpms.sh
+#
+# Targets:
+#   base — shared PHP modules (no SAPI)
+#   cli  — PHP CLI
+#   fpm  — PHP-FPM (production)
+#
+# Examples:
+#   docker build --target cli -t php:8.5.8-cli-photon .
+#   docker build --target fpm -t php:8.5.8-fpm-photon .
 ARG PHOTON_VERSION=5.0
-FROM photon:${PHOTON_VERSION}
 
-LABEL org.opencontainers.image.title="PHP 8.5 (Photon OS)" \
-      org.opencontainers.image.source="https://github.com/Lemric/photon-php" \
-      org.opencontainers.image.description="PHP 8.5 CLI + FPM built as native Photon OS RPMs"
+FROM photon:${PHOTON_VERSION} AS photon-base
+
+LABEL org.opencontainers.image.source="https://github.com/Lemric/photon-php"
 
 COPY RPM-GPG-KEY-photon-php /etc/pki/rpm-gpg/RPM-GPG-KEY-photon-php
 COPY repo /tmp/repo
+COPY install-php-rpms.sh /usr/local/bin/install-php-rpms.sh
+RUN chmod +x /usr/local/bin/install-php-rpms.sh \
+    && install-php-rpms.sh common
 
-RUN set -eux; \
-    tdnf makecache -q; \
-    tdnf install -y rpm; \
-    rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-photon-php; \
-    pick_latest() { ls -1 /tmp/repo/$1 2>/dev/null | sort -V | tail -1; }; \
-    tdnf install -y \
-        /tmp/repo/libzip-[0-9]*.rpm \
-        /tmp/repo/php85-common-*.rpm \
-        /tmp/repo/php85-cli-*.rpm \
-        /tmp/repo/php85-fpm-*.rpm \
-        /tmp/repo/php85-opcache-*.rpm \
-        /tmp/repo/php85-mbstring-*.rpm \
-        /tmp/repo/php85-intl-*.rpm \
-        /tmp/repo/php85-xml-*.rpm \
-        /tmp/repo/php85-curl-*.rpm \
-        /tmp/repo/php85-gd-*.rpm \
-        /tmp/repo/php85-zip-*.rpm \
-        /tmp/repo/php85-bcmath-*.rpm \
-        /tmp/repo/php85-sockets-*.rpm \
-        /tmp/repo/php85-mysqlnd-*.rpm \
-        /tmp/repo/php85-pgsql-*.rpm \
-        /tmp/repo/php85-8*.rpm; \
-    if ls /tmp/repo/php85-pecl-igbinary-*.rpm >/dev/null 2>&1; then \
-        tdnf install -y \
-            "$(pick_latest 'php85-pecl-igbinary-*.rpm')" \
-            "$(pick_latest 'php85-pecl-redis-*.rpm')"; \
-    fi; \
-    rm -rf /tmp/repo /var/cache/tdnf/*; \
-    php -v
+FROM photon-base AS base
+
+LABEL org.opencontainers.image.title="PHP 8.5 base (Photon OS)" \
+      org.opencontainers.image.description="PHP 8.5 core modules without CLI or FPM SAPI"
 
 WORKDIR /var/www/html
 
+FROM photon-base AS cli
+
+LABEL org.opencontainers.image.title="PHP 8.5 CLI (Photon OS)" \
+      org.opencontainers.image.description="PHP 8.5 command-line interface built from native Photon OS RPMs"
+
+RUN install-php-rpms.sh cli
+
+WORKDIR /var/www/html
+CMD ["php"]
+
+FROM photon-base AS fpm
+
+LABEL org.opencontainers.image.title="PHP 8.5 FPM (Photon OS)" \
+      org.opencontainers.image.description="PHP 8.5 FastCGI Process Manager built from native Photon OS RPMs"
+
+RUN install-php-rpms.sh fpm
+
+WORKDIR /var/www/html
 EXPOSE 9000
+STOPSIGNAL SIGQUIT
 CMD ["php-fpm", "-F"]

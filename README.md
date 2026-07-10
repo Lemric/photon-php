@@ -172,22 +172,24 @@ systemctl enable --now php85-php-fpm
 
 ## Docker images (Photon OS)
 
-Docker images compile PHP from source following the [docker-library/php](https://github.com/docker-library/php) layout on **Photon OS 5.x**.
+Production images are built from GPG-signed RPMs and published to GHCR after each successful RPM CI run.
 
-### Build
+| Image | Role |
+|-------|------|
+| `ghcr.io/lemric/php85-photon-base` | Core modules (extend with your own SAPI) |
+| `ghcr.io/lemric/php85-photon-cli` | PHP CLI |
+| `ghcr.io/lemric/php85-photon-fpm` | PHP-FPM |
 
-```bash
-docker build -f docker/8.5/photon/cli/Dockerfile -t php:8.5.8-cli-photon docker/8.5/photon/cli
-docker build -f docker/8.5/photon/fpm/Dockerfile -t php:8.5.8-fpm-photon docker/8.5/photon/fpm
-```
+See [docker/README.md](docker/README.md) for local build instructions.
 
 ### Usage
 
 ```bash
-docker run --rm -it php:8.5.8-cli-photon php -v
-docker run -d --name php-fpm -p 9000:9000 php:8.5.8-fpm-photon
-docker run --rm php:8.5.8-cli-photon docker-php-ext-install pdo_mysql gd
+docker run --rm -it ghcr.io/lemric/php85-photon-cli:8.5.8 php -v
+docker run -d --name php-fpm -p 9000:9000 ghcr.io/lemric/php85-photon-fpm:8.5.8
 ```
+
+Legacy source-compile Dockerfiles (`docker/8.5/photon/cli`, `docker/8.5/photon/fpm`) remain for local development without published RPMs.
 
 ### Kubernetes (FPM)
 
