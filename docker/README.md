@@ -8,7 +8,7 @@ PHP 8.5 container images for **VMware Photon OS 5.x** (`photon:5.0`), built from
 |-------|-------------|-----------------|
 | `ghcr.io/lemric/php85-photon-base` | Core PHP modules (no SAPI) | — |
 | `ghcr.io/lemric/php85-photon-cli` | PHP CLI | `php` |
-| `ghcr.io/lemric/php85-photon-fpm` | PHP-FPM | `php-fpm -F` |
+| `ghcr.io/lemric/php85-photon-fpm` | PHP-FPM (+ CLI, required by RPM deps) | `php-fpm -F` |
 | `ghcr.io/lemric/php85-photon` | Legacy alias → FPM | `php-fpm -F` |
 
 Tags: `8.5.8`, `latest`, plus per-arch tags (`8.5.8-x86_64`, …).

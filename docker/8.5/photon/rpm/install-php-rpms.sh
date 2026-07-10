@@ -14,7 +14,7 @@ install_gpg() {
     rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-photon-php
 }
 
-common_rpms() {
+module_rpms() {
     printf '%s\n' \
         "${REPO}"/libzip-[0-9]*.rpm \
         "${REPO}"/php85-common-*.rpm \
@@ -28,8 +28,19 @@ common_rpms() {
         "${REPO}"/php85-bcmath-*.rpm \
         "${REPO}"/php85-sockets-*.rpm \
         "${REPO}"/php85-mysqlnd-*.rpm \
-        "${REPO}"/php85-pgsql-*.rpm \
-        "${REPO}"/php85-8*.rpm
+        "${REPO}"/php85-pgsql-*.rpm
+}
+
+meta_rpms() {
+    printf '%s\n' "${REPO}"/php85-8*.rpm
+}
+
+sapi_cli_rpms() {
+    printf '%s\n' "${REPO}"/php85-cli-*.rpm
+}
+
+sapi_fpm_rpms() {
+    printf '%s\n' "${REPO}"/php85-fpm-*.rpm
 }
 
 install_pecl_redis_stack() {
@@ -51,22 +62,25 @@ install_gpg
 case "${VARIANT}" in
     common)
         # shellcheck disable=SC2046
-        tdnf install -y $(common_rpms)
+        tdnf install -y $(module_rpms)
         install_pecl_redis_stack
         ;;
     cli)
-        tdnf install -y "${REPO}"/php85-cli-*.rpm
+        # shellcheck disable=SC2046
+        tdnf install -y $(sapi_cli_rpms) $(meta_rpms)
         cleanup_repo
         php -v
         ;;
     fpm)
-        tdnf install -y "${REPO}"/php85-fpm-*.rpm
+        # php85-fpm Requires php85-cli — install both SAPIs plus the meta package.
+        # shellcheck disable=SC2046
+        tdnf install -y $(sapi_cli_rpms) $(sapi_fpm_rpms) $(meta_rpms)
         cleanup_repo
         php-fpm -t
         ;;
     all)
         # shellcheck disable=SC2046
-        tdnf install -y $(common_rpms) "${REPO}"/php85-cli-*.rpm "${REPO}"/php85-fpm-*.rpm
+        tdnf install -y $(module_rpms) $(sapi_cli_rpms) $(sapi_fpm_rpms) $(meta_rpms)
         install_pecl_redis_stack
         cleanup_repo
         php -v
