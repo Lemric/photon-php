@@ -72,6 +72,7 @@ common_rpms() {
         "${REPO}"/php85-gd-*.rpm \
         "${REPO}"/php85-zip-*.rpm \
         "${REPO}"/php85-bcmath-*.rpm \
+        "${REPO}"/php85-sodium-*.rpm \
         "${REPO}"/php85-sockets-*.rpm \
         "${REPO}"/php85-mysqlnd-*.rpm \
         "${REPO}"/php85-pgsql-*.rpm

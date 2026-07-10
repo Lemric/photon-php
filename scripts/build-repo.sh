@@ -50,7 +50,7 @@ cat > "${OUTPUT_DIR}/repodata.json" << EOF
   "packages": [
     "php85", "php85-cli", "php85-fpm", "php85-common", "php85-devel",
     "php85-opcache", "php85-mbstring", "php85-intl", "php85-xml",
-    "php85-curl", "php85-gd", "php85-zip", "php85-bcmath", "php85-soap",
+    "php85-curl", "php85-gd", "php85-zip", "php85-bcmath", "php85-sodium", "php85-soap",
     "php85-sockets", "php85-pcntl", "php85-mysqlnd", "php85-pgsql",
     "php85-pecl-redis", "php85-pecl-igbinary", "php85-pecl-apcu",
     "php85-pecl-amqp", "php85-pecl-imagick", "php85-pecl-xdebug"

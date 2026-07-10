@@ -83,7 +83,7 @@ The `CNAME` file is deployed automatically to the `gh-pages` branch by CI.
 | Package | Description |
 |---------|-------------|
 | `php85` | Meta-package (CLI + common) |
-| `php85-cli` | PHP command-line interpreter |
+| `php85-cli` | PHP command-line interpreter (includes Argon2 `password_hash` via libargon2) |
 | `php85-fpm` | PHP-FPM FastCGI process manager |
 | `php85-common` | Configuration and module directory |
 | `php85-devel` | Headers and phpize for PECL builds |
@@ -95,6 +95,7 @@ The `CNAME` file is deployed automatically to the `gh-pages` branch by CI.
 | `php85-gd` | GD imaging |
 | `php85-zip` | ZIP archives |
 | `php85-bcmath` | Arbitrary precision math |
+| `php85-sodium` | libsodium (Ed25519, crypto_box, …) |
 | `php85-soap` | SOAP protocol |
 | `php85-sockets` | Low-level sockets |
 | `php85-pcntl` | Process control (CLI) |

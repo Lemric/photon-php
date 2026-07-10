@@ -600,7 +600,8 @@ jobs:
                 \"\$(pick_latest 'php85-pecl-igbinary-*.rpm')\"
 
               php -v | grep -E 'PHP 8\.5\.[0-9]+'
-              php -m | grep -Ei '^(Zend OPcache|mbstring|intl|curl|gd|zip|bcmath|dom|xml|mysqli|pdo_mysql|pgsql|pdo_pgsql|redis|igbinary)$'
+              php -m | grep -Ei '^(Zend OPcache|mbstring|intl|curl|gd|zip|bcmath|sodium|dom|xml|mysqli|pdo_mysql|pgsql|pdo_pgsql|redis|igbinary)$'
+              php -r 'exit(defined("PASSWORD_ARGON2ID") ? 0 : 1);'
               php-fpm -t
               id php-fpm
               echo 'All tests passed'

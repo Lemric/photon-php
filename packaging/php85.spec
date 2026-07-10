@@ -2,7 +2,8 @@
 # Produces: php85, php85-common, php85-cli, php85-fpm, php85-devel,
 #           php85-opcache, php85-process, php85-mbstring, php85-intl,
 #           php85-xml, php85-curl, php85-gd, php85-zip, php85-bcmath,
-#           php85-soap, php85-sockets, php85-pcntl, php85-mysqlnd, php85-pgsql
+#           php85-sodium, php85-soap, php85-sockets, php85-pcntl,
+#           php85-mysqlnd, php85-pgsql
 
 %global php85_ver          8.5.8
 %global php85_major        85
@@ -23,7 +24,7 @@
 
 Name:           php85
 Version:        %{php85_ver}
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        PHP scripting language (version 8.5)
 License:        PHP-3.01
 URL:            https://www.php.net/
@@ -57,6 +58,8 @@ BuildRequires:  freetype2-devel
 BuildRequires:  libwebp-devel
 BuildRequires:  postgresql18-devel
 BuildRequires:  systemd-devel
+BuildRequires:  libsodium-devel
+BuildRequires:  libargon2-devel
 
 Provides:       php = %{version}
 Provides:       php-cli = %{version}
@@ -193,6 +196,19 @@ Arbitrary precision mathematics extension for PHP.
 %{php85_moddir}/bcmath.so
 %config(noreplace) %{php85_extdir}/20-bcmath.ini
 
+%package sodium
+Summary:        libsodium extension for PHP %{version}
+Requires:       %{name}-common = %{version}-%{release}
+Requires:       libsodium
+
+%description sodium
+The sodium extension provides a PHP binding for libsodium (Ed25519, XChaCha20-Poly1305, etc.).
+
+%files sodium
+%defattr(-,root,root,-)
+%{php85_moddir}/sodium.so
+%config(noreplace) %{php85_extdir}/20-sodium.ini
+
 %package soap
 Summary:        SOAP extension for PHP %{version}
 Requires:       %{name}-common = %{version}-%{release}
@@ -313,6 +329,8 @@ export LDFLAGS="%{php85_ldflags}"
     --with-freetype \
     --with-jpeg \
     --with-webp \
+    --with-sodium=shared \
+    --with-password-argon2 \
     --enable-shared \
     --disable-static \
     --disable-debug \
@@ -346,7 +364,7 @@ install -m 0644 %{SOURCE4} %{buildroot}%{_unitdir}/php85-php-fpm.service
 install -m 0644 %{SOURCE5} %{buildroot}%{php85_extdir}/10-opcache.ini
 echo "extension=pdo.so" > %{buildroot}%{php85_extdir}/15-pdo.ini
 
-for ext in mbstring intl curl gd zip bcmath soap sockets pcntl; do
+for ext in mbstring intl curl gd zip bcmath sodium soap sockets pcntl; do
     echo "extension=${ext}.so" > %{buildroot}%{php85_extdir}/20-${ext}.ini
 done
 
@@ -380,7 +398,7 @@ fi
 find %{buildroot}%{php85_moddir} -name '*.so' -exec strip --strip-unneeded {} \;
 
 missing=""
-for mod in pdo bcmath mbstring intl dom simplexml xml xmlreader xmlwriter curl gd zip \
+for mod in pdo bcmath mbstring intl dom simplexml xml xmlreader xmlwriter curl gd zip sodium \
            soap sockets pcntl sysvmsg sysvsem sysvshm mysqli pdo_mysql pgsql pdo_pgsql; do
     if [ ! -f %{buildroot}%{php85_moddir}/${mod}.so ]; then
         missing="${missing} ${mod}.so"
@@ -411,6 +429,8 @@ rm -rf %{buildroot}%{_localstatedir}/log/php-fpm.log 2>/dev/null || true
 %check
 sapi/cli/php -n -v
 sapi/cli/php -n -m | head -20
+sapi/cli/php -n -r 'exit(defined("PASSWORD_ARGON2ID") ? 0 : 1);'
+test -f modules/sodium.so
 
 %files
 %defattr(-,root,root,-)
@@ -418,6 +438,8 @@ sapi/cli/php -n -m | head -20
 %doc README.md
 
 %changelog
+* Fri Jul 10 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-2
+- Add php85-sodium (libsodium); build with libargon2 for PASSWORD_ARGON2*
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-8
 - Package pdo.so in php85-common; disable cgi/phpdbg/phar SAPIs
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-7

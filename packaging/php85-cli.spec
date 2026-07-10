@@ -7,6 +7,7 @@ Requires:       %{name}-common = %{version}-%{release}
 Requires:       libxml2
 Requires:       openssl
 Requires:       zlib
+Requires:       libargon2
 
 %description cli
 The php85-cli package contains the PHP command-line executable.
