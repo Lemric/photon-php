@@ -121,7 +121,11 @@ jobs:
     name: Reindex package repository
     runs-on: ubuntu-latest
     needs: build-bootstrap
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: |
+      always() &&
+      needs.build-bootstrap.result == 'success' &&
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

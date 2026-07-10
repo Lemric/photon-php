@@ -35,14 +35,31 @@ env:
   REPO_BASEURL: https://pkgs.photon.lemric.com
 
 jobs:
+  gate:
+    name: Verify upstream workflow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require upstream success
+        run: |
+          if [ "${{ github.event_name }}" != "workflow_run" ]; then
+            echo "Manual run — proceeding"
+            exit 0
+          fi
+          conclusion="${{ github.event.workflow_run.conclusion }}"
+          echo "Upstream: ${{ github.event.workflow_run.name }} (${conclusion})"
+          if [ "${conclusion}" != "success" ]; then
+            echo "Upstream workflow did not succeed — aborting"
+            exit 1
+          fi
+          if [ "${{ github.event.workflow_run.event }}" != "push" ]; then
+            echo "Upstream was not triggered by push — aborting"
+            exit 1
+          fi
+
   docker-image:
     name: Docker PHP 8.5 (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push')
+    needs: gate
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -120,10 +137,11 @@ jobs:
   docker-manifest:
     name: Multi-arch manifest
     runs-on: ubuntu-latest
-    needs: docker-image
+    needs: [gate, docker-image]
     if: |
-      (github.event_name == 'workflow_run') ||
-      (github.event_name == 'workflow_dispatch' && inputs.push_image)
+      needs.docker-image.result == 'success' &&
+      ((github.event_name == 'workflow_run') ||
+       (github.event_name == 'workflow_dispatch' && inputs.push_image))
     steps:
       - name: Checkout published RPM repository
         uses: actions/checkout@v4

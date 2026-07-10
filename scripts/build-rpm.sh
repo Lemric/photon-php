@@ -74,14 +74,21 @@ php85_devel_installed() {
 }
 
 install_php85_stack() {
-    local sub pkgs=(
-        common cli fpm devel opcache mbstring intl xml curl gd zip bcmath
-        soap sockets pcntl mysqlnd pgsql process
-    )
-    for sub in "${pkgs[@]}"; do
-        install_from_local_repo "php85-${sub}"
-    done
-    install_from_local_repo php85
+    local rpms
+    rpms="$(
+        find "${OUTPUT_DIR}" -maxdepth 1 -name "php85*.${ARCH}.rpm" \
+            ! -name 'php85-pecl-*' ! -name '*.src.rpm' -type f 2>/dev/null \
+            | sort | tr '\n' ' '
+    )"
+    if [ -z "${rpms}" ]; then
+        log "ERROR: php85 packages not found in ${OUTPUT_DIR}" >&2
+        return 1
+    fi
+    refresh_local_repo
+    log "Installing PHP stack (single transaction for circular Requires)"
+    # php85 <-> php85-common have circular Requires — one rpm -Uvh for all core packages.
+    # shellcheck disable=SC2086
+    rpm -Uvh --replacepkgs ${rpms}
 }
 
 fetch_remote_sources() {
