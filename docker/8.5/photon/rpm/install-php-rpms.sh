@@ -73,11 +73,20 @@ sapi_fpm_rpms() {
 }
 
 install_pecl_redis_stack() {
-    if ls "${REPO}"/php85-pecl-igbinary-*.rpm >/dev/null 2>&1; then
-        install_local_rpms \
-            "$(pick_latest 'php85-pecl-igbinary-*.rpm')" \
-            "$(pick_latest 'php85-pecl-redis-*.rpm')"
+    local igbinary redis
+    local -a pecl_rpms=()
+
+    igbinary="$(pick_latest 'php85-pecl-igbinary-*.rpm' || true)"
+    redis="$(pick_latest 'php85-pecl-redis-*.rpm' || true)"
+
+    [ -n "${igbinary}" ] && [ -f "${igbinary}" ] && pecl_rpms+=("${igbinary}")
+    [ -n "${redis}" ] && [ -f "${redis}" ] && pecl_rpms+=("${redis}")
+
+    if [ "${#pecl_rpms[@]}" -eq 0 ]; then
+        return 0
     fi
+
+    tdnf install -y "${pecl_rpms[@]}"
 }
 
 cleanup_repo() {
