@@ -95,11 +95,15 @@ PY
 apply_reindex() {
     local arch reindexed=0
 
+    # shellcheck source=ci-prune-rpms.sh
+    source "${SCRIPT_DIR}/ci-prune-rpms.sh"
+
     for arch in x86_64 aarch64; do
         if ! ls "${arch}"/*.rpm >/dev/null 2>&1; then
             log "No RPMs in ${arch} — skipping createrepo"
             continue
         fi
+        prune_arch_duplicates "${arch}"
         log "Regenerating createrepo metadata for ${arch} ($(find "${arch}" -maxdepth 1 -name '*.rpm' | wc -l | tr -d ' ') RPMs)"
         rm -rf "${arch}/repodata"
         # Default gzip metadata — Photon tdnf/libsolv cannot read xz repodata (Solv I/O error).

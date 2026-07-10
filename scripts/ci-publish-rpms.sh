@@ -120,6 +120,9 @@ PY
 
 apply_publish() {
     mkdir -p "${ARCH}"
+    # shellcheck source=ci-prune-rpms.sh
+    source "${SCRIPT_DIR}/ci-prune-rpms.sh"
+    prune_before_publish "${ARCH}" "${SOURCE_DIR}"
     cp -a "${SOURCE_DIR}"/*.rpm "${ARCH}/"
     find "${ARCH}" -maxdepth 1 -name '*.src.rpm' -delete 2>/dev/null || true
 
