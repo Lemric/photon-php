@@ -51,10 +51,16 @@ jobs:
             echo "Upstream workflow did not succeed — aborting"
             exit 1
           fi
-          if [ "${{ github.event.workflow_run.event }}" != "push" ]; then
-            echo "Upstream was not triggered by push — aborting"
-            exit 1
-          fi
+          upstream_event="${{ github.event.workflow_run.event }}"
+          case "${upstream_event}" in
+            push|workflow_run|workflow_dispatch)
+              echo "Upstream event: ${upstream_event} — proceeding"
+              ;;
+            *)
+              echo "Unexpected upstream event '${upstream_event}' — aborting"
+              exit 1
+              ;;
+          esac
 
   docker-image:
     name: Docker PHP 8.5 (${{ matrix.arch }})

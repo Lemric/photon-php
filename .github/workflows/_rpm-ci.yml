@@ -139,7 +139,8 @@ jobs:
 
       - name: Configure builder image name
         run: |
-          echo "BUILDER_IMAGE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')/photon-builder:${{ matrix.arch }}" >> "${GITHUB_ENV}"
+          chmod +x scripts/ci-builder-image-ref.sh
+          echo "BUILDER_IMAGE=$(scripts/ci-builder-image-ref.sh ${{ matrix.arch }})" >> "${GITHUB_ENV}"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -148,33 +149,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Photon RPM builder image
+      - name: Build or reuse Photon RPM builder image
+        env:
+          CI_FORCE_BUILDER_REBUILD: ${{ inputs.force_build }}
         run: |
-          set -euo pipefail
-          chmod +x scripts/install-build-deps.sh
-
-          CONTAINER="photon-builder-${{ matrix.arch }}-${{ github.run_id }}"
-          BUILDER_IMAGE="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')/photon-builder:${{ matrix.arch }}"
-
-          cleanup() {
-            docker rm -f "${CONTAINER}" >/dev/null 2>&1 || true
-          }
-          trap cleanup EXIT
-
-          docker pull --platform ${{ matrix.platform }} photon:${{ env.PHOTON_VERSION }}
-
-          # buildx cannot run RPM scriptlets (unshare); privileged docker run can.
-          docker run --privileged \
-            --platform ${{ matrix.platform }} \
-            -v "${{ github.workspace }}/scripts/install-build-deps.sh:/tmp/install-build-deps.sh:ro" \
-            --name "${CONTAINER}" \
-            photon:${{ env.PHOTON_VERSION }} \
-            bash /tmp/install-build-deps.sh
-
-          docker commit "${CONTAINER}" "${BUILDER_IMAGE}"
-          cleanup
-          trap - EXIT
-          docker push "${BUILDER_IMAGE}"
+          chmod +x scripts/ci-*.sh
+          scripts/ci-prepare-builder-image.sh "${{ matrix.arch }}" "${{ matrix.platform }}"
 
   build-wave-0:
     name: '${{ matrix.stage }} (${{ matrix.arch }})'
@@ -220,8 +200,8 @@ jobs:
         continue-on-error: ${{ matrix.stage == 'extension:imagick' }}
         run: |
           set -euo pipefail
-          chmod +x scripts/*.sh
-          BUILDER_IMAGE="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')/photon-builder:${{ matrix.arch }}"
+          chmod +x scripts/*.sh scripts/ci-builder-image-ref.sh
+          BUILDER_IMAGE="$(scripts/ci-builder-image-ref.sh "${{ matrix.arch }}")"
           docker pull "${BUILDER_IMAGE}"
           scripts/ci-run-package-build.sh "${{ matrix.group }}" "${{ matrix.arch }}" "${{ matrix.stage }}" "${{ matrix.platform }}" "${BUILDER_IMAGE}"
 
@@ -340,8 +320,8 @@ jobs:
         continue-on-error: ${{ matrix.stage == 'extension:imagick' }}
         run: |
           set -euo pipefail
-          chmod +x scripts/*.sh
-          BUILDER_IMAGE="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')/photon-builder:${{ matrix.arch }}"
+          chmod +x scripts/*.sh scripts/ci-builder-image-ref.sh
+          BUILDER_IMAGE="$(scripts/ci-builder-image-ref.sh "${{ matrix.arch }}")"
           docker pull "${BUILDER_IMAGE}"
           scripts/ci-run-package-build.sh "${{ matrix.group }}" "${{ matrix.arch }}" "${{ matrix.stage }}" "${{ matrix.platform }}" "${BUILDER_IMAGE}"
 
@@ -458,8 +438,8 @@ jobs:
       - name: Build package
         run: |
           set -euo pipefail
-          chmod +x scripts/*.sh
-          BUILDER_IMAGE="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')/photon-builder:${{ matrix.arch }}"
+          chmod +x scripts/*.sh scripts/ci-builder-image-ref.sh
+          BUILDER_IMAGE="$(scripts/ci-builder-image-ref.sh "${{ matrix.arch }}")"
           docker pull "${BUILDER_IMAGE}"
           scripts/ci-run-package-build.sh "${{ matrix.group }}" "${{ matrix.arch }}" "${{ matrix.stage }}" "${{ matrix.platform }}" "${BUILDER_IMAGE}"
 
