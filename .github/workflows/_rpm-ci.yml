@@ -594,8 +594,8 @@ jobs:
                 /repo/php85-common-*.rpm /repo/php85-cli-*.rpm /repo/php85-fpm-*.rpm \
                 /repo/php85-opcache-*.rpm /repo/php85-mbstring-*.rpm /repo/php85-intl-*.rpm \
                 /repo/php85-xml-*.rpm /repo/php85-curl-*.rpm /repo/php85-gd-*.rpm \
-                /repo/php85-zip-*.rpm /repo/php85-bcmath-*.rpm /repo/php85-mysqlnd-*.rpm \
-                /repo/php85-pgsql-*.rpm /repo/php85-8*.rpm \
+                /repo/php85-zip-*.rpm /repo/php85-bcmath-*.rpm /repo/php85-sodium-*.rpm \
+                /repo/php85-mysqlnd-*.rpm /repo/php85-pgsql-*.rpm /repo/php85-8*.rpm \
                 \"\$(pick_latest 'php85-pecl-redis-*.rpm')\" \
                 \"\$(pick_latest 'php85-pecl-igbinary-*.rpm')\"
 
