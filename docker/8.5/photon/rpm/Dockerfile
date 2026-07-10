@@ -12,6 +12,7 @@ COPY repo /tmp/repo
 
 RUN set -eux; \
     tdnf makecache -q; \
+    tdnf install -y rpm; \
     rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-photon-php; \
     pick_latest() { ls -1 /tmp/repo/$1 2>/dev/null | sort -V | tail -1; }; \
     tdnf install -y \
