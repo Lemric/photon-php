@@ -3,7 +3,7 @@
 %define php85_extname igbinary
 
 Name:           php85-pecl-igbinary
-Version:        3.2.16
+Version:        3.2.17RC1
 Release:        1%{?dist}
 Summary:        PHP %{php85_ver} igbinary serializer extension (PECL)
 License:        PHP-3.01
@@ -51,5 +51,8 @@ find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 %config(noreplace) %{php85_extdir}/30-igbinary.ini
 
 %changelog
+* Fri Jul 10 2026 Photon PHP Build <build@photon-php.local> - 3.2.17RC1-1
+- Upgrade for PHP 8.5 (php_smart_string.h removed upstream)
+
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 3.2.16-1
 - Initial igbinary PECL build for PHP 8.5 on Photon OS
