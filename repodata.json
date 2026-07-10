@@ -5,7 +5,7 @@
   "php_version": "8.5.8",
   "architectures": {
     "x86_64": {
-      "package_count": 28,
+      "package_count": 30,
       "packages": [
         "libzip-1.11.4-1.photon5.x86_64.rpm",
         "libzip-devel-1.11.4-1.photon5.x86_64.rpm",
@@ -22,10 +22,12 @@
         "php85-mysqlnd-8.5.8-1.photon5.x86_64.rpm",
         "php85-opcache-8.5.8-1.photon5.x86_64.rpm",
         "php85-pcntl-8.5.8-1.photon5.x86_64.rpm",
+        "php85-pecl-amqp-2.2.0-1.photon5.x86_64.rpm",
         "php85-pecl-apcu-5.1.24-1.photon5.x86_64.rpm",
         "php85-pecl-igbinary-3.2.17RC1-1.photon5.x86_64.rpm",
         "php85-pecl-igbinary-3.2.17RC1-2.photon5.x86_64.rpm",
         "php85-pecl-redis-6.3.0-1.photon5.x86_64.rpm",
+        "php85-pecl-xdebug-3.5.0-1.photon5.x86_64.rpm",
         "php85-pgsql-8.5.8-1.photon5.x86_64.rpm",
         "php85-process-8.5.8-1.photon5.x86_64.rpm",
         "php85-soap-8.5.8-1.photon5.x86_64.rpm",
@@ -52,10 +54,12 @@
         "php85-mysqlnd-8.5.8-1.photon5",
         "php85-opcache-8.5.8-1.photon5",
         "php85-pcntl-8.5.8-1.photon5",
+        "php85-pecl-amqp-2.2.0-1.photon5",
         "php85-pecl-apcu-5.1.24-1.photon5",
         "php85-pecl-igbinary-3.2.17RC1-1.photon5",
         "php85-pecl-igbinary-3.2.17RC1-2.photon5",
         "php85-pecl-redis-6.3.0-1.photon5",
+        "php85-pecl-xdebug-3.5.0-1.photon5",
         "php85-pgsql-8.5.8-1.photon5",
         "php85-process-8.5.8-1.photon5",
         "php85-soap-8.5.8-1.photon5",
@@ -66,11 +70,11 @@
         "rabbitmq-c-devel-0.14.0-1.photon5",
         "re2c-3.1-1.photon5"
       ],
-      "last_updated": "2026-07-10T08:29:51Z",
+      "last_updated": "2026-07-10T08:41:30Z",
       "last_stage": "reindex"
     },
     "aarch64": {
-      "package_count": 28,
+      "package_count": 31,
       "packages": [
         "libzip-1.11.4-1.photon5.aarch64.rpm",
         "libzip-devel-1.11.4-1.photon5.aarch64.rpm",
@@ -87,10 +91,13 @@
         "php85-mysqlnd-8.5.8-1.photon5.aarch64.rpm",
         "php85-opcache-8.5.8-1.photon5.aarch64.rpm",
         "php85-pcntl-8.5.8-1.photon5.aarch64.rpm",
+        "php85-pecl-amqp-2.2.0-1.photon5.aarch64.rpm",
         "php85-pecl-apcu-5.1.24-1.photon5.aarch64.rpm",
         "php85-pecl-igbinary-3.2.17RC1-1.photon5.aarch64.rpm",
         "php85-pecl-igbinary-3.2.17RC1-2.photon5.aarch64.rpm",
+        "php85-pecl-imagick-3.8.1-1.photon5.aarch64.rpm",
         "php85-pecl-redis-6.3.0-1.photon5.aarch64.rpm",
+        "php85-pecl-xdebug-3.5.0-1.photon5.aarch64.rpm",
         "php85-pgsql-8.5.8-1.photon5.aarch64.rpm",
         "php85-process-8.5.8-1.photon5.aarch64.rpm",
         "php85-soap-8.5.8-1.photon5.aarch64.rpm",
@@ -117,10 +124,13 @@
         "php85-mysqlnd-8.5.8-1.photon5",
         "php85-opcache-8.5.8-1.photon5",
         "php85-pcntl-8.5.8-1.photon5",
+        "php85-pecl-amqp-2.2.0-1.photon5",
         "php85-pecl-apcu-5.1.24-1.photon5",
         "php85-pecl-igbinary-3.2.17RC1-1.photon5",
         "php85-pecl-igbinary-3.2.17RC1-2.photon5",
+        "php85-pecl-imagick-3.8.1-1.photon5",
         "php85-pecl-redis-6.3.0-1.photon5",
+        "php85-pecl-xdebug-3.5.0-1.photon5",
         "php85-pgsql-8.5.8-1.photon5",
         "php85-process-8.5.8-1.photon5",
         "php85-soap-8.5.8-1.photon5",
@@ -131,7 +141,7 @@
         "rabbitmq-c-devel-0.14.0-1.photon5",
         "re2c-3.1-1.photon5"
       ],
-      "last_updated": "2026-07-10T08:29:51Z",
+      "last_updated": "2026-07-10T08:41:30Z",
       "last_stage": "reindex"
     }
   },
@@ -151,10 +161,13 @@
     "php85-mysqlnd-8.5.8-1.photon5",
     "php85-opcache-8.5.8-1.photon5",
     "php85-pcntl-8.5.8-1.photon5",
+    "php85-pecl-amqp-2.2.0-1.photon5",
     "php85-pecl-apcu-5.1.24-1.photon5",
     "php85-pecl-igbinary-3.2.17RC1-1.photon5",
     "php85-pecl-igbinary-3.2.17RC1-2.photon5",
+    "php85-pecl-imagick-3.8.1-1.photon5",
     "php85-pecl-redis-6.3.0-1.photon5",
+    "php85-pecl-xdebug-3.5.0-1.photon5",
     "php85-pgsql-8.5.8-1.photon5",
     "php85-process-8.5.8-1.photon5",
     "php85-soap-8.5.8-1.photon5",
@@ -165,11 +178,11 @@
     "rabbitmq-c-devel-0.14.0-1.photon5",
     "re2c-3.1-1.photon5"
   ],
-  "updated": "2026-07-10T08:29:51Z",
+  "updated": "2026-07-10T08:41:30Z",
   "commit": "3a4322c6031ec3357da44661c853d8582a66f99b",
   "last_publish": {
     "arch": "all",
     "stage": "reindex",
-    "updated": "2026-07-10T08:29:51Z"
+    "updated": "2026-07-10T08:41:30Z"
   }
 }
