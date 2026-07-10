@@ -1,54 +1,59 @@
-# PHP 8.5 on VMware Photon OS 5.x — built from GPG-signed RPMs from CI.
-# Build context: ./repo (RPMs), ./RPM-GPG-KEY-photon-php, install-php-rpms.sh
+# syntax=docker/dockerfile:1.7
+# PHP 8.5 on VMware Photon OS 5.x — production images from GPG-signed RPMs.
+# Build context: docker/8.5/photon (repo/, RPM-GPG-KEY, scripts under rpm/)
 #
-# Targets:
-#   base — shared PHP modules (no SAPI)
-#   cli  — PHP CLI
-#   fpm  — PHP-FPM (production)
-#
-# Examples:
-#   docker build --target cli -t php:8.5.8-cli-photon .
-#   docker build --target fpm -t php:8.5.8-fpm-photon .
+# Targets: base | cli | fpm
 ARG PHOTON_VERSION=5.0
 
-FROM photon:${PHOTON_VERSION} AS photon-base
+FROM photon:${PHOTON_VERSION} AS installer
 
 LABEL org.opencontainers.image.source="https://github.com/Lemric/photon-php"
 
-COPY RPM-GPG-KEY-photon-php /etc/pki/rpm-gpg/RPM-GPG-KEY-photon-php
-COPY repo /tmp/repo
-COPY install-php-rpms.sh /usr/local/bin/install-php-rpms.sh
-RUN chmod +x /usr/local/bin/install-php-rpms.sh \
-    && install-php-rpms.sh common
+COPY rpm/RPM-GPG-KEY-photon-php /etc/pki/rpm-gpg/RPM-GPG-KEY-photon-php
+COPY rpm/repo /tmp/repo
+COPY rpm/install-php-rpms.sh /usr/local/bin/install-php-rpms.sh
+COPY common/photon-runtime-cleanup.sh /usr/local/bin/photon-runtime-cleanup.sh
+COPY rpm/php-fpm-docker.conf /tmp/php-fpm-docker.conf
 
-FROM photon-base AS base
+RUN chmod +x /usr/local/bin/install-php-rpms.sh /usr/local/bin/photon-runtime-cleanup.sh \
+    && install-php-rpms.sh all \
+    && photon-runtime-cleanup.sh
 
-LABEL org.opencontainers.image.title="PHP 8.5 base (Photon OS)" \
-      org.opencontainers.image.description="PHP 8.5 core modules with CLI (RPM deps); add FPM target for php-fpm"
+FROM scratch AS runtime
+
+COPY --from=installer / /
+
+ENV PHP_FPM_UID=999 \
+    PHP_FPM_GID=999
 
 WORKDIR /var/www/html
 
-FROM photon-base AS cli
+FROM runtime AS base
+
+LABEL org.opencontainers.image.title="PHP 8.5 base (Photon OS)" \
+      org.opencontainers.image.description="PHP 8.5 core modules with CLI (RPM deps)"
+
+CMD ["php"]
+
+FROM runtime AS cli
 
 LABEL org.opencontainers.image.title="PHP 8.5 CLI (Photon OS)" \
       org.opencontainers.image.description="PHP 8.5 command-line interface built from native Photon OS RPMs"
 
-RUN install-php-rpms.sh cli
-
-WORKDIR /var/www/html
+USER ${PHP_FPM_UID}:${PHP_FPM_GID}
 CMD ["php"]
 
-FROM photon-base AS fpm
+FROM runtime AS fpm
 
 LABEL org.opencontainers.image.title="PHP 8.5 FPM (Photon OS)" \
       org.opencontainers.image.description="PHP 8.5 FastCGI Process Manager built from native Photon OS RPMs"
 
-RUN install-php-rpms.sh fpm
+USER ${PHP_FPM_UID}:${PHP_FPM_GID}
 
-COPY php-fpm-docker.conf /etc/php85/php-fpm.d/zz-docker.conf
-RUN sed -i '/^listen\.allowed_clients/d' /etc/php85/php-fpm.d/www.conf
-
-WORKDIR /var/www/html
 EXPOSE 9000
 STOPSIGNAL SIGQUIT
-CMD ["php-fpm", "-F"]
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["/usr/sbin/php-fpm", "-t"]
+
+CMD ["/usr/sbin/php-fpm", "-F"]

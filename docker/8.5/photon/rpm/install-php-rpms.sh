@@ -1,17 +1,17 @@
 #!/bin/bash
-# Install PHP 8.5 RPMs from /tmp/repo into a Photon OS container.
+# Install PHP 8.5 RPMs from /tmp/repo into a Photon OS container (BUILD stage only).
 # Usage: install-php-rpms.sh <common|cli|fpm|all>
-#
-# Uses tdnf install with local RPM paths so Photon repo runtime deps
-# (shadow, oniguruma, icu, libxml2, …) are pulled automatically.
-# All PHP RPMs for a stage must be installed in one transaction.
 set -euo pipefail
 
 VARIANT="${1:?variant required: common|cli|fpm|all}"
 REPO="${REPO_DIR:-/tmp/repo}"
 
 pick_latest() {
-    ls -1 "${REPO}/$1" 2>/dev/null | sort -V | tail -1
+    local -a matches=( "${REPO}"/$1 )
+    if ((${#matches[@]} == 0)) || [[ ! -e "${matches[0]}" ]]; then
+        return 1
+    fi
+    printf '%s\n' "${matches[@]}" | sort -V | tail -1
 }
 
 install_gpg() {
@@ -40,38 +40,6 @@ install_local_rpms() {
     tdnf install -y "${rpms[@]}"
 }
 
-libzip_rpms() {
-    printf '%s\n' "${REPO}"/libzip-[0-9]*.rpm
-}
-
-module_rpms() {
-    printf '%s\n' \
-        "${REPO}"/php85-common-*.rpm \
-        "${REPO}"/php85-opcache-*.rpm \
-        "${REPO}"/php85-mbstring-*.rpm \
-        "${REPO}"/php85-intl-*.rpm \
-        "${REPO}"/php85-xml-*.rpm \
-        "${REPO}"/php85-curl-*.rpm \
-        "${REPO}"/php85-gd-*.rpm \
-        "${REPO}"/php85-zip-*.rpm \
-        "${REPO}"/php85-bcmath-*.rpm \
-        "${REPO}"/php85-sockets-*.rpm \
-        "${REPO}"/php85-mysqlnd-*.rpm \
-        "${REPO}"/php85-pgsql-*.rpm
-}
-
-meta_rpms() {
-    printf '%s\n' "${REPO}"/php85-8*.rpm
-}
-
-sapi_cli_rpms() {
-    printf '%s\n' "${REPO}"/php85-cli-*.rpm
-}
-
-sapi_fpm_rpms() {
-    printf '%s\n' "${REPO}"/php85-fpm-*.rpm
-}
-
 install_pecl_redis_stack() {
     local igbinary redis
     local -a pecl_rpms=()
@@ -83,69 +51,77 @@ install_pecl_redis_stack() {
     [ -n "${redis}" ] && [ -f "${redis}" ] && pecl_rpms+=("${redis}")
 
     if [ "${#pecl_rpms[@]}" -eq 0 ]; then
+        echo "No PECL redis/igbinary RPMs in ${REPO} — skipping"
         return 0
     fi
 
     tdnf install -y "${pecl_rpms[@]}"
 }
 
-cleanup_repo() {
-    rm -rf "${REPO}" /var/cache/tdnf/*
+common_rpms() {
+    install_local_rpms \
+        "${REPO}"/libzip-[0-9]*.rpm \
+        "${REPO}"/php85-common-*.rpm \
+        "${REPO}"/php85-cli-*.rpm \
+        "${REPO}"/php85-8*.rpm \
+        "${REPO}"/php85-opcache-*.rpm \
+        "${REPO}"/php85-mbstring-*.rpm \
+        "${REPO}"/php85-intl-*.rpm \
+        "${REPO}"/php85-xml-*.rpm \
+        "${REPO}"/php85-curl-*.rpm \
+        "${REPO}"/php85-gd-*.rpm \
+        "${REPO}"/php85-zip-*.rpm \
+        "${REPO}"/php85-bcmath-*.rpm \
+        "${REPO}"/php85-sockets-*.rpm \
+        "${REPO}"/php85-mysqlnd-*.rpm \
+        "${REPO}"/php85-pgsql-*.rpm
+    install_pecl_redis_stack
+}
+
+configure_fpm_for_containers() {
+  if [ ! -f /etc/php85/php-fpm.d/www.conf ]; then
+    return 0
+  fi
+
+  sed -i '/^listen\.allowed_clients/d' /etc/php85/php-fpm.d/www.conf
+  sed -i '/^slowlog[[:space:]]*=/d' /etc/php85/php-fpm.d/www.conf
+  sed -i '/^request_slowlog_timeout[[:space:]]*=/d' /etc/php85/php-fpm.d/www.conf
+
+  install -d -m 0755 -o php-fpm -g php-fpm /var/log/php85-fpm /var/lib/php85-fpm /tmp/php-fpm
+  chmod 1777 /tmp
+
+  if [ -f /tmp/php-fpm-docker.conf ]; then
+    install -m 0644 /tmp/php-fpm-docker.conf /etc/php85/php-fpm.d/zz-docker.conf
+  fi
+}
+
+fpm_rpms() {
+    install_local_rpms "${REPO}"/php85-fpm-*.rpm
+    configure_fpm_for_containers
+    php-fpm -t
 }
 
 tdnf makecache -q
 tdnf install -y rpm
+# Align base glibc with current Photon repos before local PHP RPM transaction.
+tdnf update -y glibc glibc-libs
 install_gpg
 
 case "${VARIANT}" in
     common)
-        install_local_rpms \
-            "${REPO}"/libzip-[0-9]*.rpm \
-            "${REPO}"/php85-common-*.rpm \
-            "${REPO}"/php85-cli-*.rpm \
-            "${REPO}"/php85-8*.rpm \
-            "${REPO}"/php85-opcache-*.rpm \
-            "${REPO}"/php85-mbstring-*.rpm \
-            "${REPO}"/php85-intl-*.rpm \
-            "${REPO}"/php85-xml-*.rpm \
-            "${REPO}"/php85-curl-*.rpm \
-            "${REPO}"/php85-gd-*.rpm \
-            "${REPO}"/php85-zip-*.rpm \
-            "${REPO}"/php85-bcmath-*.rpm \
-            "${REPO}"/php85-sockets-*.rpm \
-            "${REPO}"/php85-mysqlnd-*.rpm \
-            "${REPO}"/php85-pgsql-*.rpm
-        install_pecl_redis_stack
+        common_rpms
         ;;
     cli)
-        cleanup_repo
         php -v
         ;;
     fpm)
         install_local_rpms "${REPO}"/php85-fpm-*.rpm
-        cleanup_repo
+        configure_fpm_for_containers
         php-fpm -t
         ;;
     all)
-        install_local_rpms \
-            "${REPO}"/libzip-[0-9]*.rpm \
-            "${REPO}"/php85-common-*.rpm \
-            "${REPO}"/php85-cli-*.rpm \
-            "${REPO}"/php85-fpm-*.rpm \
-            "${REPO}"/php85-8*.rpm \
-            "${REPO}"/php85-opcache-*.rpm \
-            "${REPO}"/php85-mbstring-*.rpm \
-            "${REPO}"/php85-intl-*.rpm \
-            "${REPO}"/php85-xml-*.rpm \
-            "${REPO}"/php85-curl-*.rpm \
-            "${REPO}"/php85-gd-*.rpm \
-            "${REPO}"/php85-zip-*.rpm \
-            "${REPO}"/php85-bcmath-*.rpm \
-            "${REPO}"/php85-sockets-*.rpm \
-            "${REPO}"/php85-mysqlnd-*.rpm \
-            "${REPO}"/php85-pgsql-*.rpm
-        install_pecl_redis_stack
-        cleanup_repo
+        common_rpms
+        fpm_rpms
         php -v
         ;;
     *)
@@ -153,3 +129,6 @@ case "${VARIANT}" in
         exit 1
         ;;
 esac
+
+tdnf clean all
+rm -rf /var/cache/tdnf/* /tmp/repo /tmp/php-fpm-docker.conf 2>/dev/null || true

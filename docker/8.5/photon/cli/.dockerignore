@@ -1,0 +1,5 @@
+# Legacy source-compile contexts
+.git
+.gitignore
+*.md
+html/

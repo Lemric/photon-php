@@ -1,0 +1,8 @@
+# RPM build context — only *.rpm artifacts are needed at image build time.
+*.md
+.git
+.gitignore
+test-scratch.Dockerfile
+
+# Local analysis output
+image-analysis/

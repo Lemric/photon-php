@@ -1,12 +1,13 @@
+# syntax=docker/dockerfile:1.7
 #
-# docker-library/php layout for VMware Photon OS 5.x
-# https://github.com/docker-library/php/blob/master/8.5/alpine3.23/cli/Dockerfile
-#
+# docker-library/php CLI layout for VMware Photon OS 5.x (legacy source build).
 # Build: docker build -f cli/Dockerfile -t php:8.5.8-cli-photon .
 # Context: docker/8.5/photon
 #
 
-FROM photon:5.0
+ARG PHOTON_VERSION=5.0
+
+FROM photon:${PHOTON_VERSION} AS builder
 
 RUN set -eux; \
 	if [ -f /etc/tdnf/tdnf.conf ]; then \
@@ -26,7 +27,8 @@ ENV PHPIZE_DEPS \
 		findutils \
 		which
 
-RUN set -eux; \
+RUN --mount=type=cache,target=/var/cache/tdnf,sharing=locked \
+	set -eux; \
 	tdnf makecache; \
 	tdnf install -y \
 		ca-certificates \
@@ -45,15 +47,11 @@ RUN set -eux; \
 	tdnf clean all
 
 RUN set -eux; \
-	getent group nginx >/dev/null || groupadd -r nginx; \
-	id -u nginx >/dev/null 2>&1 || useradd -u 82 -r -g nginx -s /sbin/nologin nginx; \
 	mkdir -p /var/www/html; \
-	chown nginx:nginx /var/www/html; \
 	chmod 1777 /var/www/html
 
 ENV PHP_INI_DIR=/usr/local/etc/php
-RUN set -eux; \
-	mkdir -p "$PHP_INI_DIR/conf.d"
+RUN mkdir -p "$PHP_INI_DIR/conf.d"
 
 ENV PHP_CFLAGS="-fstack-protector-strong -fpic -fpie -O2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"
 ENV PHP_CPPFLAGS="$PHP_CFLAGS"
@@ -77,7 +75,7 @@ RUN set -eux; \
 	done; \
 	gpg --batch --verify php.tar.xz.asc php.tar.xz; \
 	gpgconf --kill all; \
-	rm -rf "$GNUPGHOME"
+	rm -rf "$GNUPGHOME" php.tar.xz.asc
 
 COPY common/docker-php-ensure-re2c common/docker-php-source common/docker-php-build /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-php-ensure-re2c /usr/local/bin/docker-php-source /usr/local/bin/docker-php-build \
@@ -90,7 +88,22 @@ COPY common/docker-php-ext-configure common/docker-php-ext-enable common/docker-
 RUN chmod +x /usr/local/bin/docker-php-ext-* /usr/local/bin/docker-php-entrypoint \
 	&& set -eux; \
 	if php -m | grep -qi sodium; then :; \
-	elif [ -f "$(php-config --extension-dir)/sodium.so" ]; then docker-php-ext-enable sodium; fi
+	elif [ -f "$(php-config --extension-dir)/sodium.so" ]; then docker-php-ext-enable sodium; fi; \
+	php --version
 
-ENTRYPOINT ["docker-php-entrypoint"]
+COPY common/photon-runtime-cleanup.sh /usr/local/bin/photon-runtime-cleanup.sh
+RUN chmod +x /usr/local/bin/photon-runtime-cleanup.sh && photon-runtime-cleanup.sh
+
+FROM scratch AS runtime
+
+COPY --from=builder / /
+
+ENV NGINX_UID=82 \
+    NGINX_GID=82
+
+WORKDIR /var/www/html
+
+USER ${NGINX_UID}:${NGINX_GID}
+
+ENTRYPOINT ["/usr/local/bin/docker-php-entrypoint"]
 CMD ["php", "-a"]

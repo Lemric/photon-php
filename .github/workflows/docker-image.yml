@@ -120,21 +120,35 @@ jobs:
           fi
 
       - name: Build images from published RPMs
+        env:
+          DOCKER_BUILDKIT: '1'
         run: |
           set -euo pipefail
           VERSION="${{ steps.meta.outputs.php_version }}"
           ARCH="${{ matrix.arch }}"
-          CONTEXT="docker/8.5/photon/rpm"
+          CONTEXT="docker/8.5/photon"
 
           for target in base cli fpm; do
             docker build \
               --platform ${{ matrix.platform }} \
               --build-arg PHOTON_VERSION=${{ env.PHOTON_VERSION }} \
               --target "${target}" \
-              -f "${CONTEXT}/Dockerfile" \
+              -f "${CONTEXT}/rpm/Dockerfile" \
               -t "php:${VERSION}-${target}-photon-${ARCH}" \
               "${CONTEXT}"
           done
+
+      - name: Analyze image sizes
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.meta.outputs.php_version }}"
+          ARCH="${{ matrix.arch }}"
+          chmod +x scripts/docker-image-analyze.sh
+          for target in base cli fpm; do
+            scripts/docker-image-analyze.sh "php:${VERSION}-${target}-photon-${ARCH}" "docker/image-analysis/${ARCH}"
+          done
+          echo "## Image sizes (${ARCH})" >> "${GITHUB_STEP_SUMMARY}"
+          grep -h '^IMAGE_SIZE=\|^LAYERS=' docker/image-analysis/${ARCH}/*.txt | sort -u >> "${GITHUB_STEP_SUMMARY}" || true
 
       - name: Smoke-test images
         run: |
@@ -148,6 +162,10 @@ jobs:
             "php:${VERSION}-cli-photon-${ARCH}" php -m
 
           docker run --rm --platform ${{ matrix.platform }} \
+            "php:${VERSION}-fpm-photon-${ARCH}" php-fpm -t
+
+          docker run --rm --platform ${{ matrix.platform }} \
+            --user 999:999 \
             "php:${VERSION}-fpm-photon-${ARCH}" php-fpm -t
 
       - name: Push images to GHCR
