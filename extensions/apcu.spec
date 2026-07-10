@@ -8,7 +8,7 @@ Release:        1%{?dist}
 Summary:        PHP %{php85_ver} APCu user cache extension (PECL)
 License:        PHP-3.01
 URL:            https://pecl.php.net/package/APCu
-Source0:        https://pecl.php.net/get/APCu-%{version}.tgz
+Source0:        https://pecl.php.net/get/apcu-%{version}.tgz
 
 BuildRequires:  php85-devel = %{php85_ver}
 BuildRequires:  gcc
@@ -25,7 +25,7 @@ APCu is a userland caching module for PHP offering an object cache
 for storing arbitrary data in shared memory.
 
 %prep
-%autosetup -n APCu-%{version}
+%autosetup -n apcu-%{version}
 
 %build
 export CFLAGS="-O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC"
