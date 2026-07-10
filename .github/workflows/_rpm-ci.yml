@@ -204,6 +204,11 @@ jobs:
             repodata.json
           sparse-checkout-cone-mode: false
 
+      - name: Configure artifact name slug
+        run: echo "STAGE_SLUG=${STAGE//:/-}" >> "${GITHUB_ENV}"
+        env:
+          STAGE: ${{ matrix.stage }}
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -224,7 +229,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: rpms-w0-${{ matrix.arch }}-${{ matrix.stage }}
+          name: rpms-w0-${{ matrix.arch }}-${{ env.STAGE_SLUG }}
           path: repo/${{ matrix.arch }}/*.rpm
           if-no-files-found: error
           retention-days: 7
@@ -319,6 +324,11 @@ jobs:
             find wave-deps -type f -name '*.rpm' -exec cp -f {} "repo/${{ matrix.arch }}/" \;
           fi
 
+      - name: Configure artifact name slug
+        run: echo "STAGE_SLUG=${STAGE//:/-}" >> "${GITHUB_ENV}"
+        env:
+          STAGE: ${{ matrix.stage }}
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -339,7 +349,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: rpms-w1-${{ matrix.arch }}-${{ matrix.stage }}
+          name: rpms-w1-${{ matrix.arch }}-${{ env.STAGE_SLUG }}
           path: repo/${{ matrix.arch }}/*.rpm
           if-no-files-found: error
           retention-days: 7
@@ -433,6 +443,11 @@ jobs:
             find wave-deps -type f -name '*.rpm' -exec cp -f {} "repo/${{ matrix.arch }}/" \;
           fi
 
+      - name: Configure artifact name slug
+        run: echo "STAGE_SLUG=${STAGE//:/-}" >> "${GITHUB_ENV}"
+        env:
+          STAGE: ${{ matrix.stage }}
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -451,7 +466,7 @@ jobs:
       - name: Upload RPM artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rpms-w2-${{ matrix.arch }}-${{ matrix.stage }}
+          name: rpms-w2-${{ matrix.arch }}-${{ env.STAGE_SLUG }}
           path: repo/${{ matrix.arch }}/*.rpm
           if-no-files-found: error
           retention-days: 7
