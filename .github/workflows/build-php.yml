@@ -220,6 +220,9 @@ jobs:
             bash -c "
               set -euo pipefail
 
+              # Minimal photon:5.0 image ships tdnf but not rpm — install tools first.
+              tdnf install -y rpm shadow
+
               rpm -Uvh --replacepkgs /repo/libzip-[0-9]*.rpm /repo/rabbitmq-c-[0-9]*.rpm
               rpm -Uvh --replacepkgs \
                 /repo/php85-common-*.rpm /repo/php85-cli-*.rpm /repo/php85-fpm-*.rpm \
@@ -228,15 +231,13 @@ jobs:
                 /repo/php85-zip-*.rpm /repo/php85-bcmath-*.rpm /repo/php85-mysqlnd-*.rpm \
                 /repo/php85-pgsql-*.rpm /repo/php85-8*.rpm \
                 /repo/php85-pecl-redis-*.rpm /repo/php85-pecl-igbinary-*.rpm 2>/dev/null \
-              || {
-                tdnf install -y /repo/libzip-[0-9]*.rpm /repo/rabbitmq-c-[0-9]*.rpm \
-                  /repo/php85-common-*.rpm /repo/php85-cli-*.rpm /repo/php85-fpm-*.rpm \
-                  /repo/php85-opcache-*.rpm /repo/php85-mbstring-*.rpm /repo/php85-intl-*.rpm \
-                  /repo/php85-xml-*.rpm /repo/php85-curl-*.rpm /repo/php85-gd-*.rpm \
-                  /repo/php85-zip-*.rpm /repo/php85-bcmath-*.rpm /repo/php85-mysqlnd-*.rpm \
-                  /repo/php85-pgsql-*.rpm /repo/php85-8*.rpm \
-                  /repo/php85-pecl-redis-*.rpm /repo/php85-pecl-igbinary-*.rpm
-              }
+              || tdnf install -y /repo/libzip-[0-9]*.rpm /repo/rabbitmq-c-[0-9]*.rpm \
+                /repo/php85-common-*.rpm /repo/php85-cli-*.rpm /repo/php85-fpm-*.rpm \
+                /repo/php85-opcache-*.rpm /repo/php85-mbstring-*.rpm /repo/php85-intl-*.rpm \
+                /repo/php85-xml-*.rpm /repo/php85-curl-*.rpm /repo/php85-gd-*.rpm \
+                /repo/php85-zip-*.rpm /repo/php85-bcmath-*.rpm /repo/php85-mysqlnd-*.rpm \
+                /repo/php85-pgsql-*.rpm /repo/php85-8*.rpm \
+                /repo/php85-pecl-redis-*.rpm /repo/php85-pecl-igbinary-*.rpm
 
               php -v | grep -E 'PHP 8\.5\.[0-9]+'
               php -m | grep -Ei '^(Zend OPcache|mbstring|intl|curl|gd|zip|bcmath|dom|xml|mysqli|pdo_mysql|pgsql|pdo_pgsql|redis|igbinary)$'
