@@ -2,8 +2,9 @@
 # Install PHP 8.5 RPMs from /tmp/repo into a Photon OS container.
 # Usage: install-php-rpms.sh <common|cli|fpm|all>
 #
-# Uses rpm -Uvh (not tdnf) so circular Requires between php85, php85-common
-# and php85-cli resolve in a single transaction — same approach as build-rpm.sh.
+# Uses tdnf install with local RPM paths so Photon repo runtime deps
+# (shadow, oniguruma, icu, libxml2, …) are pulled automatically.
+# All PHP RPMs for a stage must be installed in one transaction.
 set -euo pipefail
 
 VARIANT="${1:?variant required: common|cli|fpm|all}"
@@ -17,22 +18,26 @@ install_gpg() {
     rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-photon-php
 }
 
-install_rpm_files() {
-    local -a rpms=()
-    local rpm
-
-    for rpm in "$@"; do
-        [ -f "${rpm}" ] || continue
-        rpms+=("${rpm}")
+collect_existing_rpms() {
+    local pattern rpm
+    for pattern in "$@"; do
+        for rpm in ${pattern}; do
+            [ -f "${rpm}" ] || continue
+            printf '%s\n' "${rpm}"
+        done
     done
+}
+
+install_local_rpms() {
+    local -a rpms=()
+    mapfile -t rpms < <(collect_existing_rpms "$@")
 
     if [ "${#rpms[@]}" -eq 0 ]; then
         echo "ERROR: no RPM files to install" >&2
         return 1
     fi
 
-    # shellcheck disable=SC2068
-    rpm -Uvh --replacepkgs ${rpms[@]}
+    tdnf install -y "${rpms[@]}"
 }
 
 libzip_rpms() {
@@ -67,21 +72,9 @@ sapi_fpm_rpms() {
     printf '%s\n' "${REPO}"/php85-fpm-*.rpm
 }
 
-stack_without_fpm() {
-    libzip_rpms
-    module_rpms
-    sapi_cli_rpms
-    meta_rpms
-}
-
-stack_all() {
-    stack_without_fpm
-    sapi_fpm_rpms
-}
-
 install_pecl_redis_stack() {
     if ls "${REPO}"/php85-pecl-igbinary-*.rpm >/dev/null 2>&1; then
-        install_rpm_files \
+        install_local_rpms \
             "$(pick_latest 'php85-pecl-igbinary-*.rpm')" \
             "$(pick_latest 'php85-pecl-redis-*.rpm')"
     fi
@@ -97,8 +90,22 @@ install_gpg
 
 case "${VARIANT}" in
     common)
-        # shellcheck disable=SC2046
-        install_rpm_files $(stack_without_fpm)
+        install_local_rpms \
+            "${REPO}"/libzip-[0-9]*.rpm \
+            "${REPO}"/php85-common-*.rpm \
+            "${REPO}"/php85-cli-*.rpm \
+            "${REPO}"/php85-8*.rpm \
+            "${REPO}"/php85-opcache-*.rpm \
+            "${REPO}"/php85-mbstring-*.rpm \
+            "${REPO}"/php85-intl-*.rpm \
+            "${REPO}"/php85-xml-*.rpm \
+            "${REPO}"/php85-curl-*.rpm \
+            "${REPO}"/php85-gd-*.rpm \
+            "${REPO}"/php85-zip-*.rpm \
+            "${REPO}"/php85-bcmath-*.rpm \
+            "${REPO}"/php85-sockets-*.rpm \
+            "${REPO}"/php85-mysqlnd-*.rpm \
+            "${REPO}"/php85-pgsql-*.rpm
         install_pecl_redis_stack
         ;;
     cli)
@@ -106,14 +113,28 @@ case "${VARIANT}" in
         php -v
         ;;
     fpm)
-        # shellcheck disable=SC2046
-        install_rpm_files $(sapi_fpm_rpms)
+        install_local_rpms "${REPO}"/php85-fpm-*.rpm
         cleanup_repo
         php-fpm -t
         ;;
     all)
-        # shellcheck disable=SC2046
-        install_rpm_files $(stack_all)
+        install_local_rpms \
+            "${REPO}"/libzip-[0-9]*.rpm \
+            "${REPO}"/php85-common-*.rpm \
+            "${REPO}"/php85-cli-*.rpm \
+            "${REPO}"/php85-fpm-*.rpm \
+            "${REPO}"/php85-8*.rpm \
+            "${REPO}"/php85-opcache-*.rpm \
+            "${REPO}"/php85-mbstring-*.rpm \
+            "${REPO}"/php85-intl-*.rpm \
+            "${REPO}"/php85-xml-*.rpm \
+            "${REPO}"/php85-curl-*.rpm \
+            "${REPO}"/php85-gd-*.rpm \
+            "${REPO}"/php85-zip-*.rpm \
+            "${REPO}"/php85-bcmath-*.rpm \
+            "${REPO}"/php85-sockets-*.rpm \
+            "${REPO}"/php85-mysqlnd-*.rpm \
+            "${REPO}"/php85-pgsql-*.rpm
         install_pecl_redis_stack
         cleanup_repo
         php -v
