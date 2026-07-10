@@ -156,6 +156,11 @@ jobs:
           CONTAINER="photon-builder-${{ matrix.arch }}-${{ github.run_id }}"
           BUILDER_IMAGE="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')/photon-builder:${{ matrix.arch }}"
 
+          cleanup() {
+            docker rm -f "${CONTAINER}" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
           docker pull --platform ${{ matrix.platform }} photon:${{ env.PHOTON_VERSION }}
 
           # buildx cannot run RPM scriptlets (unshare); privileged docker run can.
@@ -167,7 +172,8 @@ jobs:
             bash /tmp/install-build-deps.sh
 
           docker commit "${CONTAINER}" "${BUILDER_IMAGE}"
-          docker rm "${CONTAINER}"
+          cleanup
+          trap - EXIT
           docker push "${BUILDER_IMAGE}"
 
   build-wave-0:
@@ -215,7 +221,7 @@ jobs:
           scripts/ci-run-package-build.sh "${{ matrix.group }}" "${{ matrix.arch }}" "${{ matrix.stage }}" "${{ matrix.platform }}" "${BUILDER_IMAGE}"
 
       - name: Upload RPM artifact
-        if: success() || (failure() && matrix.stage == 'extension:imagick')
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: rpms-w0-${{ matrix.arch }}-${{ matrix.stage }}
@@ -227,11 +233,15 @@ jobs:
     name: Publish wave 0 (${{ matrix.arch }})
     runs-on: ubuntu-latest
     needs: [plan, build-wave-0]
+    concurrency:
+      group: gh-pages-publish-${{ github.repository }}
+      cancel-in-progress: false
     if: |
+      always() &&
       inputs.publish_rpms &&
       needs.plan.outputs.has_builds == 'true' &&
       needs.plan.outputs.wave0 != '[]' &&
-      needs.build-wave-0.result == 'success'
+      needs.build-wave-0.result != 'cancelled'
     strategy:
       matrix:
         arch: [x86_64, aarch64]
@@ -242,12 +252,12 @@ jobs:
           ref: ${{ inputs.checkout_ref || github.sha }}
 
       - name: Download wave 0 artifacts
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: rpms-w0-${{ matrix.arch }}-*
           path: artifacts
           merge-multiple: true
-          if-no-files-found: ignore
 
       - name: Publish RPMs
         env:
@@ -294,18 +304,20 @@ jobs:
         continue-on-error: true
 
       - name: Download wave 0 RPM dependencies
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: rpms-w0-${{ matrix.arch }}-*
           path: wave-deps
           merge-multiple: true
-          if-no-files-found: ignore
 
       - name: Seed dependency RPMs from wave 0
         run: |
           mkdir -p "published/${{ matrix.arch }}" "repo/${{ matrix.arch }}"
-          find wave-deps -type f -name '*.rpm' -exec cp -f {} "published/${{ matrix.arch }}/" \;
-          find wave-deps -type f -name '*.rpm' -exec cp -f {} "repo/${{ matrix.arch }}/" \;
+          if [ -d wave-deps ]; then
+            find wave-deps -type f -name '*.rpm' -exec cp -f {} "published/${{ matrix.arch }}/" \;
+            find wave-deps -type f -name '*.rpm' -exec cp -f {} "repo/${{ matrix.arch }}/" \;
+          fi
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -324,7 +336,7 @@ jobs:
           scripts/ci-run-package-build.sh "${{ matrix.group }}" "${{ matrix.arch }}" "${{ matrix.stage }}" "${{ matrix.platform }}" "${BUILDER_IMAGE}"
 
       - name: Upload RPM artifact
-        if: success() || (failure() && matrix.stage == 'extension:imagick')
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: rpms-w1-${{ matrix.arch }}-${{ matrix.stage }}
@@ -336,11 +348,15 @@ jobs:
     name: Publish wave 1 (${{ matrix.arch }})
     runs-on: ubuntu-latest
     needs: [plan, build-wave-1]
+    concurrency:
+      group: gh-pages-publish-${{ github.repository }}
+      cancel-in-progress: false
     if: |
+      always() &&
       inputs.publish_rpms &&
       needs.plan.outputs.has_builds == 'true' &&
       needs.plan.outputs.wave1 != '[]' &&
-      needs.build-wave-1.result == 'success'
+      needs.build-wave-1.result != 'cancelled'
     strategy:
       matrix:
         arch: [x86_64, aarch64]
@@ -351,12 +367,12 @@ jobs:
           ref: ${{ inputs.checkout_ref || github.sha }}
 
       - name: Download wave 1 artifacts
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: rpms-w1-${{ matrix.arch }}-*
           path: artifacts
           merge-multiple: true
-          if-no-files-found: ignore
 
       - name: Publish RPMs
         env:
@@ -402,18 +418,20 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: Download wave 1 RPM dependencies
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: rpms-w1-${{ matrix.arch }}-*
           path: wave-deps
           merge-multiple: true
-          if-no-files-found: ignore
 
       - name: Seed dependency RPMs from wave 1
         run: |
           mkdir -p "published/${{ matrix.arch }}" "repo/${{ matrix.arch }}"
-          find wave-deps -type f -name '*.rpm' -exec cp -f {} "published/${{ matrix.arch }}/" \;
-          find wave-deps -type f -name '*.rpm' -exec cp -f {} "repo/${{ matrix.arch }}/" \;
+          if [ -d wave-deps ]; then
+            find wave-deps -type f -name '*.rpm' -exec cp -f {} "published/${{ matrix.arch }}/" \;
+            find wave-deps -type f -name '*.rpm' -exec cp -f {} "repo/${{ matrix.arch }}/" \;
+          fi
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -442,11 +460,15 @@ jobs:
     name: Publish wave 2 (${{ matrix.arch }})
     runs-on: ubuntu-latest
     needs: [plan, build-wave-2]
+    concurrency:
+      group: gh-pages-publish-${{ github.repository }}
+      cancel-in-progress: false
     if: |
+      always() &&
       inputs.publish_rpms &&
       needs.plan.outputs.has_builds == 'true' &&
       needs.plan.outputs.wave2 != '[]' &&
-      needs.build-wave-2.result == 'success'
+      needs.build-wave-2.result != 'cancelled'
     strategy:
       matrix:
         arch: [x86_64, aarch64]
@@ -457,12 +479,12 @@ jobs:
           ref: ${{ inputs.checkout_ref || github.sha }}
 
       - name: Download wave 2 artifacts
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: rpms-w2-${{ matrix.arch }}-*
           path: artifacts
           merge-multiple: true
-          if-no-files-found: ignore
 
       - name: Publish RPMs
         env:
@@ -487,7 +509,8 @@ jobs:
       needs.plan.outputs.has_builds == 'true' &&
       (needs.publish-wave-0.result == 'success' || needs.publish-wave-0.result == 'skipped') &&
       (needs.publish-wave-1.result == 'success' || needs.publish-wave-1.result == 'skipped') &&
-      (needs.publish-wave-2.result == 'success' || needs.publish-wave-2.result == 'skipped')
+      (needs.publish-wave-2.result == 'success' || needs.publish-wave-2.result == 'skipped') &&
+      (needs.publish-wave-0.result == 'success' || needs.publish-wave-1.result == 'success' || needs.publish-wave-2.result == 'success')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

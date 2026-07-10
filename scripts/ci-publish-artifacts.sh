@@ -19,7 +19,7 @@ copied=0
 while IFS= read -r -d '' rpm; do
     cp -f "${rpm}" "${DEST_DIR}/"
     copied=$((copied + 1))
-done < <(find "${ARTIFACTS_ROOT}" -type f -name '*.rpm' -print0 2>/dev/null)
+done < <(find "${ARTIFACTS_ROOT}" -type f -name "*.${ARCH}.rpm" -print0 2>/dev/null)
 
 if [ "${copied}" -eq 0 ]; then
     log "No RPM artifacts to publish for ${ARCH}/${WAVE_LABEL}"
