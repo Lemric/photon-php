@@ -46,8 +46,12 @@ install_bootstrap_from_published() {
     done
 }
 
-log "=== Installing build dependencies ==="
-scripts/install-build-deps.sh
+if [ "${CI_SKIP_ENV_SETUP:-0}" = "1" ]; then
+    log "=== Using pre-built RPM environment (CI_SKIP_ENV_SETUP) ==="
+else
+    log "=== Installing build dependencies ==="
+    scripts/install-build-deps.sh
+fi
 
 install_bootstrap_from_published
 

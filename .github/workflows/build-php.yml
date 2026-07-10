@@ -27,12 +27,7 @@ concurrency:
 
 permissions:
   contents: write
-
-env:
-  PHP_VERSION: ${{ github.event.inputs.php_version || '8.5.8' }}
-  PHOTON_VERSION: '5.0'
-  REPO_BASEURL: https://pkgs.photon.lemric.com
-  PUBLISH_BRANCH: ${{ github.event.inputs.publish_branch || 'gh-pages' }}
+  packages: write
 
 jobs:
   gate:
@@ -56,196 +51,17 @@ jobs:
             exit 1
           fi
 
-  build-php:
-    name: 'PHP ${{ matrix.arch }} (native)'
-    runs-on: ${{ matrix.runner }}
+  php:
+    name: PHP RPM pipeline
     needs: gate
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-latest
-            platform: linux/amd64
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
-            platform: linux/arm64
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-
-      - name: Checkout published RPMs
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.PUBLISH_BRANCH }}
-          path: published
-          sparse-checkout: |
-            x86_64
-            aarch64
-            repodata.json
-          sparse-checkout-cone-mode: false
-
-      - name: Build changed PHP packages
-        id: build
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PHP_VERSION: ${{ env.PHP_VERSION }}
-          REPO_BASEURL: ${{ env.REPO_BASEURL }}
-          PUBLISH_BRANCH: ${{ env.PUBLISH_BRANCH }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-          CI_FORCE_BUILD: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_build || '0' }}
-        run: |
-          set -euo pipefail
-          chmod +x scripts/*.sh
-
-          test -d "published/${{ matrix.arch }}"
-          ls "published/${{ matrix.arch }}"/*.rpm >/dev/null
-
-          mapfile -t stages < <(scripts/ci-changed-stages.sh php "${{ matrix.arch }}" published)
-          if [ "${#stages[@]}" -eq 0 ]; then
-            echo "No PHP packages need rebuilding for ${{ matrix.arch }}"
-            echo "has_artifacts=false" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-
-          echo "has_artifacts=true" >> "${GITHUB_OUTPUT}"
-
-          publish_stage() {
-            local stage="$1"
-            scripts/ci-publish-rpms.sh "${{ matrix.arch }}" "repo/${{ matrix.arch }}" --rpms-only "${stage}"
-          }
-
-          run_stage() {
-            local stage="$1"
-            echo "=== Building PHP stage: ${stage} ==="
-            docker run --privileged --rm \
-              --platform ${{ matrix.platform }} \
-              -v "${{ github.workspace }}:/build" \
-              -v "${{ github.workspace }}/published/${{ matrix.arch }}:/published:ro" \
-              -w /build \
-              -e PHP_VERSION="${{ env.PHP_VERSION }}" \
-              -e ARCH="${{ matrix.arch }}" \
-              -e OUTPUT_DIR="/build/repo/${{ matrix.arch }}" \
-              -e RPMBUILD_DIR="/build/.rpmbuild-${{ matrix.arch }}" \
-              -e REPO_BASEURL="${{ env.REPO_BASEURL }}" \
-              photon:${{ env.PHOTON_VERSION }} \
-              bash -c "scripts/ci-build-php.sh ${stage}"
-          }
-
-          for stage in "${stages[@]}"; do
-            if [ "${stage}" = "extension:imagick" ]; then
-              if ! run_stage "${stage}"; then
-                echo "WARNING: imagick build failed — skipping"
-                continue
-              fi
-            else
-              run_stage "${stage}"
-            fi
-            publish_stage "${stage}"
-          done
-
-      - name: Upload PHP repository artifact
-        if: steps.build.outputs.has_artifacts == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: repo-${{ matrix.arch }}
-          path: repo/${{ matrix.arch }}/
-          retention-days: 7
-
-  reindex-repo:
-    name: Reindex package repository
-    runs-on: ubuntu-latest
-    needs: [gate, build-php]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-
-      - name: Rebuild repository index
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PHP_VERSION: ${{ env.PHP_VERSION }}
-          REPO_BASEURL: ${{ env.REPO_BASEURL }}
-          PUBLISH_BRANCH: ${{ env.PUBLISH_BRANCH }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-        run: |
-          chmod +x scripts/*.sh
-          scripts/ci-reindex-repo.sh
-
-  test-install:
-    name: Test install (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
-    needs: [gate, reindex-repo]
-    if: needs.reindex-repo.result == 'success'
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-latest
-            platform: linux/amd64
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
-            platform: linux/arm64
-
-    steps:
-      - name: Checkout published RPMs
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.PUBLISH_BRANCH }}
-          path: published
-          sparse-checkout: |
-            ${{ matrix.arch }}
-          sparse-checkout-cone-mode: false
-
-      - name: Test installation and functionality
-        run: |
-          if ! ls "published/${{ matrix.arch }}"/php85-8*.rpm >/dev/null 2>&1; then
-            echo "PHP packages not published yet for ${{ matrix.arch }} — skipping"
-            exit 0
-          fi
-
-          docker run --privileged --rm \
-            --platform ${{ matrix.platform }} \
-            -v "${{ github.workspace }}/published/${{ matrix.arch }}:/repo:ro" \
-            photon:${{ env.PHOTON_VERSION }} \
-            bash -c "
-              set -euo pipefail
-
-              # Minimal photon:5.0 image ships tdnf but not rpm — install tools first.
-              tdnf install -y rpm shadow
-
-              pick_latest() { ls -1 /repo/\$1 2>/dev/null | sort -V | tail -1; }
-
-              rpm -Uvh --replacepkgs /repo/libzip-[0-9]*.rpm /repo/rabbitmq-c-[0-9]*.rpm
-              rpm -Uvh --replacepkgs \
-                /repo/php85-common-*.rpm /repo/php85-cli-*.rpm /repo/php85-fpm-*.rpm \
-                /repo/php85-opcache-*.rpm /repo/php85-mbstring-*.rpm /repo/php85-intl-*.rpm \
-                /repo/php85-xml-*.rpm /repo/php85-curl-*.rpm /repo/php85-gd-*.rpm \
-                /repo/php85-zip-*.rpm /repo/php85-bcmath-*.rpm /repo/php85-mysqlnd-*.rpm \
-                /repo/php85-pgsql-*.rpm /repo/php85-8*.rpm \
-                \"\$(pick_latest 'php85-pecl-redis-*.rpm')\" \
-                \"\$(pick_latest 'php85-pecl-igbinary-*.rpm')\" 2>/dev/null \
-              || tdnf install -y /repo/libzip-[0-9]*.rpm /repo/rabbitmq-c-[0-9]*.rpm \
-                /repo/php85-common-*.rpm /repo/php85-cli-*.rpm /repo/php85-fpm-*.rpm \
-                /repo/php85-opcache-*.rpm /repo/php85-mbstring-*.rpm /repo/php85-intl-*.rpm \
-                /repo/php85-xml-*.rpm /repo/php85-curl-*.rpm /repo/php85-gd-*.rpm \
-                /repo/php85-zip-*.rpm /repo/php85-bcmath-*.rpm /repo/php85-mysqlnd-*.rpm \
-                /repo/php85-pgsql-*.rpm /repo/php85-8*.rpm \
-                \"\$(pick_latest 'php85-pecl-redis-*.rpm')\" \
-                \"\$(pick_latest 'php85-pecl-igbinary-*.rpm')\"
-
-              php -v | grep -E 'PHP 8\.5\.[0-9]+'
-              php -m | grep -Ei '^(Zend OPcache|mbstring|intl|curl|gd|zip|bcmath|dom|xml|mysqli|pdo_mysql|pgsql|pdo_pgsql|redis|igbinary)$'
-              php-fpm -t
-              id php-fpm
-              echo 'All tests passed'
-            "
+    uses: ./.github/workflows/_rpm-ci.yml
+    with:
+      group: php
+      checkout_ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      php_version: ${{ github.event.inputs.php_version || '8.5.8' }}
+      publish_branch: ${{ github.event.inputs.publish_branch || 'gh-pages' }}
+      force_build: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_build && '1' || '0' }}
+      publish_rpms: true
+      reindex: true
+      run_test_install: true
+    secrets: inherit
