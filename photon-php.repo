@@ -2,4 +2,5 @@
 name=Photon PHP 8.5
 baseurl=https://pkgs.photon.lemric.com/$basearch
 enabled=1
-gpgcheck=0
+gpgcheck=1
+gpgkey=https://pkgs.photon.lemric.com/RPM-GPG-KEY-photon-php
