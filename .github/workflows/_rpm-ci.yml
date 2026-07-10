@@ -148,19 +148,27 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Build and push Photon RPM builder image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: docker/photon-builder/Dockerfile
-          platforms: ${{ matrix.platform }}
-          push: true
-          tags: ${{ env.BUILDER_IMAGE }}
-          cache-from: type=gha,scope=photon-builder-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=photon-builder-${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/install-build-deps.sh
+
+          CONTAINER="photon-builder-${{ matrix.arch }}-${{ github.run_id }}"
+          BUILDER_IMAGE="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')/photon-builder:${{ matrix.arch }}"
+
+          docker pull --platform ${{ matrix.platform }} photon:${{ env.PHOTON_VERSION }}
+
+          # buildx cannot run RPM scriptlets (unshare); privileged docker run can.
+          docker run --privileged \
+            --platform ${{ matrix.platform }} \
+            -v "${{ github.workspace }}/scripts/install-build-deps.sh:/tmp/install-build-deps.sh:ro" \
+            --name "${CONTAINER}" \
+            photon:${{ env.PHOTON_VERSION }} \
+            bash /tmp/install-build-deps.sh
+
+          docker commit "${CONTAINER}" "${BUILDER_IMAGE}"
+          docker rm "${CONTAINER}"
+          docker push "${BUILDER_IMAGE}"
 
   build-wave-0:
     name: '${{ matrix.stage }} (${{ matrix.arch }})'

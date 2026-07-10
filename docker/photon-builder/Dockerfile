@@ -1,11 +1,8 @@
-# Pre-built RPM toolchain for Photon OS 5.x CI jobs.
-# Rebuild when scripts/install-build-deps.sh changes.
+# CI builds this image with privileged "docker run" + "docker commit" (_rpm-ci.yml).
+# Local equivalent:
+#   docker run --privileged -v "$PWD/scripts/install-build-deps.sh:/tmp/s:ro" \
+#     --name photon-builder photon:5.0 bash /tmp/s
+#   docker commit photon-builder photon-php-builder:local
 FROM photon:5.0
 
-# RPM scriptlets (e.g. postgresql18-server %prein) need unshare; buildx lacks it.
-ENV CI_DOCKER_IMAGE_BUILD=1
-
 WORKDIR /build
-
-COPY scripts/install-build-deps.sh /tmp/install-build-deps.sh
-RUN bash /tmp/install-build-deps.sh && rm -f /tmp/install-build-deps.sh

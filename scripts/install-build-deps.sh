@@ -15,13 +15,7 @@ fi
 log() { echo "==> $*"; }
 
 install_pkgs() {
-    local -a extra_args=()
-    if [ "${CI_DOCKER_IMAGE_BUILD:-0}" = "1" ]; then
-        # docker buildx cannot run RPM scriptlets that call unshare(2).
-        extra_args+=(--setopt=tsflags=noscripts)
-        extra_args+=(--exclude=postgresql18-server)
-    fi
-    tdnf install -y "${extra_args[@]}" "$@"
+    tdnf install -y "$@"
 }
 
 log "Refreshing tdnf metadata"
