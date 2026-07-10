@@ -24,10 +24,8 @@ Do not commit source code here. All changes are made on `main` and deployed incr
 ## Install
 
 ```bash
-ARCH=$(uname -m)
 curl -fsSL https://pkgs.photon.lemric.com/photon-php.repo \
-  | sed "s|/x86_64|/${ARCH}|g" \
-  > /etc/yum.repos.d/photon-php.repo
+  -o /etc/yum.repos.d/photon-php.repo
 tdnf makecache
 tdnf install -y php85 php85-fpm php85-opcache
 ```
