@@ -49,20 +49,25 @@ rpm_gpg_setup() {
         gpg --homedir "${gpg_home}" --batch --import <<< "${RPM_GPG_PRIVATE_KEY}"
     fi
 
-    if [ -n "${RPM_GPG_PASSPHRASE:-}" ]; then
-        passphrase_arg="--passphrase ${RPM_GPG_PASSPHRASE}"
-    else
-        passphrase_arg='--passphrase ""'
-    fi
-
+    # Ubuntu's rpm does not expand %{__key_id} in %__gpg_sign_cmd — use the literal key id.
     cat > "${macros_file}" <<EOF
 %_signature gpg
 %_gpg_name ${key_id}
 %_gpg_path ${gpg_home}
-%__gpg_sign_cmd %{__gpg} gpg --homedir ${gpg_home} --batch --no-tty --pinentry-mode loopback ${passphrase_arg} --no-permission-warning -q -u %{__key_id} -o %{__signature_filename} -s %{__plaintext_filename}
 EOF
 
+    if [ -n "${RPM_GPG_PASSPHRASE:-}" ]; then
+        cat >> "${macros_file}" <<EOF
+%__gpg_sign_cmd %{__gpg} gpg --homedir ${gpg_home} --batch --no-tty --pinentry-mode loopback --passphrase ${RPM_GPG_PASSPHRASE} --no-permission-warning -q -u ${key_id} -o %{__signature_filename} -s %{__plaintext_filename}
+EOF
+    else
+        cat >> "${macros_file}" <<EOF
+%__gpg_sign_cmd %{__gpg} gpg --homedir ${gpg_home} --batch --no-tty --pinentry-mode loopback --no-permission-warning -q -u ${key_id} -o %{__signature_filename} -s %{__plaintext_filename}
+EOF
+    fi
+
     export GNUPGHOME="${gpg_home}"
+    export GPG_TTY="${GPG_TTY:-}"
     rpm_gpg_log "GPG signing configured for key ${key_id}"
 }
 
