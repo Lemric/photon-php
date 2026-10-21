@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 #
 # docker-library/php FPM layout for VMware Photon OS 5.x (legacy source build).
-# Build: docker build -f fpm/Dockerfile -t php:8.5.8-fpm-photon .
+# Build: docker build -f fpm/Dockerfile -t php:8.5.11-fpm-photon .
 # Context: docker/8.5/photon
 #
 
@@ -62,7 +62,7 @@ ENV PHP_LDFLAGS="-Wl,-O1 -pie"
 
 ENV GPG_KEYS 1198C0117593497A5EC5C199286AF1F9897469DC 49D9AF6BC72A80D6691719C8AA23F5BE9C7097D4 D95C03BC702BE9515344AE3374E44BC9067701A5
 
-ENV PHP_VERSION=8.5.8
+ENV PHP_VERSION=8.5.11
 ENV PHP_URL="https://www.php.net/distributions/php-8.5.11.tar.xz" PHP_ASC_URL="https://www.php.net/distributions/php-8.5.11.tar.xz.asc"
 ENV PHP_SHA256="58910198d19e873048fe87cdfe16bc790025417ede3d1651bfa1c4b533d573f2"
 

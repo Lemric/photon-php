@@ -1,10 +1,10 @@
 # Photon PHP — PHP 8.5 RPM Repository for VMware Photon OS
 
-Production-ready RPM packaging system for **PHP >= 8.5.8** compiled from official [php.net](https://www.php.net/) sources, targeting **VMware Photon OS 5.x** with full `tdnf` compatibility.
+Production-ready RPM packaging system for **PHP >= 8.5.11** compiled from official [php.net](https://www.php.net/) sources, targeting **VMware Photon OS 5.x** with full `tdnf` compatibility.
 
 ## Features
 
-- PHP 8.5.8 built from source with optimized flags (`-O2`, LTO, stack protector, FORTIFY_SOURCE)
+- PHP 8.5.11 built from source with optimized flags (`-O2`, LTO, stack protector, FORTIFY_SOURCE)
 - Split RPM subpackages: CLI, FPM, OPcache, and 15+ standard extensions
 - PECL extensions: redis, igbinary, apcu, amqp, imagick, xdebug
 - Production PHP-FPM configuration with security hardening
@@ -186,8 +186,8 @@ See [docker/README.md](docker/README.md) for local build instructions.
 ### Usage
 
 ```bash
-docker run --rm -it ghcr.io/lemric/php85-photon-cli:8.5.8 php -v
-docker run -d --name php-fpm -p 9000:9000 ghcr.io/lemric/php85-photon-fpm:8.5.8
+docker run --rm -it ghcr.io/lemric/php85-photon-cli:8.5.11 php -v
+docker run -d --name php-fpm -p 9000:9000 ghcr.io/lemric/php85-photon-fpm:8.5.11
 ```
 
 Legacy source-compile Dockerfiles (`docker/8.5/photon/cli`, `docker/8.5/photon/fpm`) remain for local development without published RPMs.
@@ -211,7 +211,7 @@ spec:
     spec:
       containers:
         - name: php-fpm
-          image: php:8.5.8-fpm-photon
+          image: php:8.5.11-fpm-photon
           ports:
             - containerPort: 9000
           readinessProbe:
@@ -236,7 +236,7 @@ See [docker/README.md](docker/README.md) for details.
 | Compatibility | Photon OS native | docker-library/php |
 | Extensions | Separate RPMs | `docker-php-ext-install` |
 
-Both approaches compile PHP 8.5.8 from php.net sources.
+Both approaches compile PHP 8.5.11 from php.net sources.
 
 ## GitHub Pages
 

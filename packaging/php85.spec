@@ -5,7 +5,7 @@
 #           php85-sodium, php85-soap, php85-sockets, php85-pcntl,
 #           php85-mysqlnd, php85-pgsql
 
-%global php85_ver          8.5.8
+%global php85_ver          8.5.11
 %global php85_major        85
 %global php85_api          20250925
 %global php85_zend_api     420250925
@@ -438,21 +438,21 @@ test -f modules/sodium.so
 %doc README.md
 
 %changelog
-* Fri Jul 10 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-2
+* Fri Jul 10 2026 Photon PHP Build <build@photon-php.local> - 8.5.11-2
 - Add php85-sodium (libsodium); build with libargon2 for PASSWORD_ARGON2*
-* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-8
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.11-8
 - Package pdo.so in php85-common; disable cgi/phpdbg/phar SAPIs
-* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-7
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.11-7
 - Disable pdo_sqlite (pdo is shared; no sqlite subpackage in repo)
-* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-6
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.11-6
 - Build all modular extensions as shared (.so); verify modules in %%install
-* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-5
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.11-5
 - php85-opcache is config-only; OPcache is built into PHP 8.5 (no opcache.so)
-* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-4
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.11-4
 - Move shared modules from php/extensions/<api>/ into %{php85_moddir}
-* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-3
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.11-3
 - Relocate man pages from /usr/php/man to %{_mandir}; keep php/build for phpize
-* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-2
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.11-2
 - Drop -flto=auto (breaks OPcache JIT global register variables on GCC 14)
-* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.8-1
-- Initial PHP 8.5.8 build for VMware Photon OS 5.x
+* Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.11-1
+- Initial PHP 8.5.11 build for VMware Photon OS 5.x

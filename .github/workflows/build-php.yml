@@ -10,7 +10,7 @@ on:
       php_version:
         description: 'PHP version to build'
         required: false
-        default: '8.5.8'
+        default: '8.5.11'
       publish_branch:
         description: 'Branch with published bootstrap RPMs'
         required: false
@@ -64,7 +64,7 @@ jobs:
     with:
       group: php
       checkout_ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-      php_version: ${{ github.event.inputs.php_version || '8.5.8' }}
+      php_version: ${{ github.event.inputs.php_version || '8.5.11' }}
       publish_branch: ${{ github.event.inputs.publish_branch || 'gh-pages' }}
       force_build: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_build && '1' || '0' }}
       publish_rpms: true
