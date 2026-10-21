@@ -15,10 +15,19 @@ RUN_ID="${GITHUB_RUN_ID:-local}"
 
 log() { echo "[ci-builder] $*"; }
 
+# Fingerprint of Photon updates repo metadata — a cached builder with outdated
+# libraries (e.g. ICU) links RPMs against sonames no longer installable from Photon.
+photon_repo_fingerprint() {
+    local photon_ver="$1"
+    curl -fsSL "https://packages.broadcom.com/photon/${photon_ver}/photon_updates_${photon_ver}_${ARCH}/repodata/repomd.xml" 2>/dev/null \
+        | sha256sum | awk '{print $1}' || true
+}
+
 deps_hash() {
     local photon_ver="$1"
     local deps_file="$2"
-    printf '%s-%s' "${photon_ver}" "$(sha256sum "${deps_file}" | awk '{print $1}')"
+    printf '%s-%s-%s' "${photon_ver}" "$(sha256sum "${deps_file}" | awk '{print $1}')" \
+        "$(photon_repo_fingerprint "${photon_ver}")"
 }
 
 image_ref() {

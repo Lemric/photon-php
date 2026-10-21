@@ -24,7 +24,7 @@
 
 Name:           php85
 Version:        %{php85_ver}
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        PHP scripting language (version 8.5)
 License:        PHP-3.01
 URL:            https://www.php.net/
@@ -438,6 +438,9 @@ test -f modules/sodium.so
 %doc README.md
 
 %changelog
+* Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 8.5.11-3
+- Rebuild against ICU 78 from current Photon 5.0 updates
+
 * Fri Jul 10 2026 Photon PHP Build <build@photon-php.local> - 8.5.11-2
 - Add php85-sodium (libsodium); build with libargon2 for PASSWORD_ARGON2*
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 8.5.11-8
