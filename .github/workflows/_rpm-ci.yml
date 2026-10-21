@@ -221,7 +221,8 @@ jobs:
         with:
           name: rpms-w0-${{ matrix.arch }}-${{ env.STAGE_SLUG }}
           path: repo/${{ matrix.arch }}/*.rpm
-          if-no-files-found: error
+          # imagick is skipped where ImageMagick-devel is unavailable — nothing to upload
+          if-no-files-found: ${{ matrix.stage == 'extension:imagick' && 'ignore' || 'error' }}
           retention-days: 7
 
   publish-wave-0:
@@ -341,7 +342,8 @@ jobs:
         with:
           name: rpms-w1-${{ matrix.arch }}-${{ env.STAGE_SLUG }}
           path: repo/${{ matrix.arch }}/*.rpm
-          if-no-files-found: error
+          # imagick is skipped where ImageMagick-devel is unavailable — nothing to upload
+          if-no-files-found: ${{ matrix.stage == 'extension:imagick' && 'ignore' || 'error' }}
           retention-days: 7
 
   publish-wave-1:
