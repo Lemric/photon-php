@@ -191,7 +191,7 @@ fetch_remote_sources() {
             continue
         fi
         log "Downloading source: ${url}"
-        curl -fSL -o "${dest}" "${url}"
+        curl -fSL --retry 5 --retry-delay 5 --retry-all-errors -o "${dest}" "${url}"
     done <<< "${urls}"
 }
 
