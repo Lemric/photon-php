@@ -46,6 +46,22 @@ install_bootstrap_from_published() {
     done
 }
 
+# Keep only RPMs rebuilt by this job — seeded copies share filenames with fresh builds
+# (same NVR across PHP versions) and would overwrite them when artifacts are merged.
+prune_output_to_built() {
+    local -A built=()
+    local rpm
+    while IFS= read -r rpm; do
+        built["$(basename "${rpm}")"]=1
+    done < <(find "${RPMBUILD_DIR}/RPMS/${ARCH}" "${RPMBUILD_DIR}/SRPMS" -name '*.rpm' -type f 2>/dev/null)
+
+    for rpm in "${OUTPUT_DIR}"/*.rpm; do
+        [ -f "${rpm}" ] || continue
+        [ -n "${built[$(basename "${rpm}")]+x}" ] && continue
+        rm -f "${rpm}"
+    done
+}
+
 if [ "${CI_SKIP_ENV_SETUP:-0}" = "1" ]; then
     log "=== Using pre-built RPM environment (CI_SKIP_ENV_SETUP) ==="
 else
@@ -71,6 +87,8 @@ case "${STAGE}" in
         exit 1
         ;;
 esac
+
+prune_output_to_built
 
 log "=== PHP stage ${STAGE} complete for ${ARCH} ==="
 ls -la "${OUTPUT_DIR}"/*.rpm 2>/dev/null || true

@@ -4,7 +4,7 @@
 
 Name:           php85-pecl-igbinary
 Version:        3.2.17RC1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        PHP %{php85_ver} igbinary serializer extension (PECL)
 License:        PHP-3.01
 URL:            https://pecl.php.net/package/igbinary
@@ -57,6 +57,9 @@ find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 /usr/include/php85/php/ext/igbinary/
 
 %changelog
+* Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 3.2.17RC1-3
+- Rebuild against PHP 8.5.11
+
 * Fri Jul 10 2026 Photon PHP Build <build@photon-php.local> - 3.2.17RC1-2
 - Ship igbinary.h headers required to build php85-pecl-redis
 

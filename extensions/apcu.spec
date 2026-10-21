@@ -4,7 +4,7 @@
 
 Name:           php85-pecl-apcu
 Version:        5.1.24
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        PHP %{php85_ver} APCu user cache extension (PECL)
 License:        PHP-3.01
 URL:            https://pecl.php.net/package/APCu
@@ -57,5 +57,8 @@ find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 %config(noreplace) %{php85_extdir}/30-apcu.ini
 
 %changelog
+* Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 5.1.24-2
+- Rebuild against PHP 8.5.11
+
 * Thu Jul 09 2026 Photon PHP Build <build@photon-php.local> - 5.1.24-1
 - Initial APCu PECL build for PHP 8.5 on Photon OS
