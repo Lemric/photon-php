@@ -104,8 +104,9 @@ fpm_rpms() {
 
 tdnf makecache -q
 tdnf install -y rpm
-# Align base glibc with current Photon repos before local PHP RPM transaction.
-tdnf update -y glibc glibc-libs
+# Bring every base package up to current Photon updates (security fixes) before
+# the local PHP RPM transaction — the photon:5.0 base image lags behind the repos.
+tdnf update -y
 install_gpg
 
 case "${VARIANT}" in
