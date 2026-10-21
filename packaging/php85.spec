@@ -5,7 +5,7 @@
 #           php85-sodium, php85-soap, php85-sockets, php85-pcntl,
 #           php85-mysqlnd, php85-pgsql
 
-%global php85_ver          8.5.11
+%global php85_ver          8.5.12
 %global php85_major        85
 %global php85_api          20250925
 %global php85_zend_api     420250925
@@ -24,7 +24,7 @@
 
 Name:           php85
 Version:        %{php85_ver}
-Release:        3%{?dist}
+Release:        1%{?dist}
 Summary:        PHP scripting language (version 8.5)
 License:        PHP-3.01
 URL:            https://www.php.net/
@@ -438,6 +438,9 @@ test -f modules/sodium.so
 %doc README.md
 
 %changelog
+* Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 8.5.12-1
+- Upgrade to PHP 8.5.12 (security release)
+
 * Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 8.5.11-3
 - Rebuild against ICU 78 from current Photon 5.0 updates
 

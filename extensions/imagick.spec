@@ -4,7 +4,7 @@
 
 Name:           php85-pecl-imagick
 Version:        3.8.1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        PHP %{php85_ver} ImageMagick extension (PECL)
 License:        PHP-3.01
 URL:            https://pecl.php.net/package/imagick
@@ -53,6 +53,9 @@ find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 %config(noreplace) %{php85_extdir}/30-imagick.ini
 
 %changelog
+* Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 3.8.1-3
+- Rebuild against PHP 8.5.12
+
 * Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 3.8.1-2
 - Rebuild against PHP 8.5.11
 

@@ -4,7 +4,7 @@
 
 Name:           php85-pecl-redis
 Version:        6.3.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        PHP %{php85_ver} Redis extension (PECL)
 License:        PHP-3.01
 URL:            https://pecl.php.net/package/redis
@@ -54,6 +54,9 @@ find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 %config(noreplace) %{php85_extdir}/30-redis.ini
 
 %changelog
+* Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 6.3.0-3
+- Rebuild against PHP 8.5.12
+
 * Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 6.3.0-2
 - Rebuild against PHP 8.5.11
 

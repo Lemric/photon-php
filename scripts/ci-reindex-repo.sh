@@ -2,7 +2,7 @@
 # Rebuild createrepo metadata and repodata.json for all architectures on gh-pages.
 set -euo pipefail
 
-PHP_VERSION="${PHP_VERSION:-8.5.11}"
+PHP_VERSION="${PHP_VERSION:-8.5.12}"
 REPO_BASEURL="${REPO_BASEURL:-https://pkgs.photon.lemric.com}"
 PUBLISH_BRANCH="${PUBLISH_BRANCH:-gh-pages}"
 GITHUB_REPOSITORY="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"

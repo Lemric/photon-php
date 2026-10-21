@@ -4,7 +4,7 @@ FROM photon:5.0 AS builder
 LABEL maintainer="Photon PHP Build <build@photon-php.local>"
 LABEL description="RPM build environment for PHP 8.5 on Photon OS"
 
-ENV PHP_VERSION=8.5.11 \
+ENV PHP_VERSION=8.5.12 \
     LANG=C.UTF-8 \
     RPMBUILD_DIR=/rpmbuild \
     OUTPUT_DIR=/output

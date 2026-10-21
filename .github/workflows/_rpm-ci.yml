@@ -21,7 +21,7 @@ on:
         description: 'PHP version for metadata and PHP builds'
         required: false
         type: string
-        default: '8.5.11'
+        default: '8.5.12'
       publish_branch:
         description: 'Branch with published RPMs'
         required: false

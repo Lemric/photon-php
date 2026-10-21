@@ -16,7 +16,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # shellcheck source=rpm-gpg-common.sh
 source "${SCRIPT_DIR}/rpm-gpg-common.sh"
 
-PHP_VERSION="${PHP_VERSION:-8.5.11}"
+PHP_VERSION="${PHP_VERSION:-8.5.12}"
 ARCH="${ARCH:-$(uname -m)}"
 DIST="${DIST:-photon5}"
 RELEASE="${RELEASE:-1}"

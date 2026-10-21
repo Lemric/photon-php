@@ -4,7 +4,7 @@
 
 Name:           php85-pecl-amqp
 Version:        2.2.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        PHP %{php85_ver} AMQP extension (PECL)
 License:        PHP-3.01
 URL:            https://pecl.php.net/package/amqp
@@ -55,6 +55,9 @@ find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 %config(noreplace) %{php85_extdir}/30-amqp.ini
 
 %changelog
+* Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 2.2.0-3
+- Rebuild against PHP 8.5.12
+
 * Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 2.2.0-2
 - Rebuild against PHP 8.5.11
 
