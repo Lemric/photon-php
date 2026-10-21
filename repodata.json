@@ -70,7 +70,7 @@
         "rabbitmq-c-devel-0.14.0-1.photon5",
         "re2c-3.1-1.photon5"
       ],
-      "last_updated": "2026-10-21T12:34:55Z",
+      "last_updated": "2026-10-21T12:37:56Z",
       "last_stage": "reindex"
     },
     "aarch64": {
@@ -141,7 +141,7 @@
         "rabbitmq-c-devel-0.14.0-1.photon5",
         "re2c-3.1-1.photon5"
       ],
-      "last_updated": "2026-10-21T12:34:55Z",
+      "last_updated": "2026-10-21T12:37:56Z",
       "last_stage": "reindex"
     }
   },
@@ -178,11 +178,11 @@
     "rabbitmq-c-devel-0.14.0-1.photon5",
     "re2c-3.1-1.photon5"
   ],
-  "updated": "2026-10-21T12:34:55Z",
-  "commit": "5d8e8516c16d191adae08685643a4153649f2292",
+  "updated": "2026-10-21T12:37:56Z",
+  "commit": "ea5e54fc317d220e037d93c74c096cfc9e468f62",
   "last_publish": {
     "arch": "all",
     "stage": "reindex",
-    "updated": "2026-10-21T12:34:55Z"
+    "updated": "2026-10-21T12:37:56Z"
   }
 }
