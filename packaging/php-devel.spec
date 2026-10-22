@@ -1,5 +1,5 @@
-# php85-devel subpackage fragment
-# Included by php85.spec — do not build standalone.
+# php%{php_major}-devel subpackage fragment
+# Included by php%{php_major}.spec — do not build standalone.
 
 %package devel
 Summary:        Files needed for building PHP %{version} extensions
@@ -18,8 +18,8 @@ Includes phpize, php-config, headers, and the embedded SAPI library.
 %defattr(-,root,root,-)
 %{_bindir}/phpize
 %{_bindir}/php-config
-%{_includedir}/php85
-%{_libdir}/libphp85.so*
+%{_includedir}/php%{php_major}
+%{_libdir}/libphp%{php_major}.so*
 %{_libdir}/php/build
 %{_mandir}/man1/phpize.1*
 %{_mandir}/man1/php-config.1*

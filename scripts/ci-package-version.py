@@ -3,19 +3,44 @@
 from __future__ import annotations
 
 import glob
+import os
 import re
 import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+
+def load_series() -> dict[str, str]:
+    """Macros that scripts/php-series.sh passes to rpmbuild for PHP_SERIES."""
+    series = os.environ.get("PHP_SERIES", "85")
+    conf = PROJECT_ROOT / f"packaging/series/{series}.conf"
+    if not conf.is_file():
+        raise SystemExit(f"ERROR: unknown PHP_SERIES '{series}'")
+    raw: dict[str, str] = {}
+    for line in conf.read_text(encoding="utf-8").splitlines():
+        match = re.match(r'(\w+)=(?:"([^"]*)"|(\S*))\s*(?:#.*)?$', line.strip())
+        if match:
+            raw[match.group(1)] = match.group(2) if match.group(2) is not None else match.group(3)
+    pre = raw.get("PHP_PRERELEASE", "")
+    return {
+        "php_major": raw["PHP_MAJOR"],
+        "php_branch": raw["PHP_BRANCH"],
+        "php_ver": raw["PHP_VERSION"],
+        "php_srcver": raw["PHP_VERSION"] + pre,
+        "php_relpfx": f"0.{pre.lower()}." if pre else "",
+    }
+
+
+SERIES = load_series()
+
 STAGE_SPECS: dict[str, list[Path]] = {
     "re2c": [PROJECT_ROOT / "packaging/re2c.spec"],
     "libzip": [PROJECT_ROOT / "packaging/libzip.spec"],
     "rabbitmq-c": [PROJECT_ROOT / "packaging/rabbitmq-c.spec"],
     "php": [
-        PROJECT_ROOT / "packaging/php85.spec",
-        PROJECT_ROOT / "packaging/macros.php85",
+        PROJECT_ROOT / "packaging/php.spec",
+        PROJECT_ROOT / f"packaging/series/{SERIES['php_major']}.conf",
         *sorted(Path(p) for p in glob.glob(str(PROJECT_ROOT / "packaging/configs/*"))),
     ],
 }
@@ -31,6 +56,7 @@ def expand(value: str, globals_map: dict[str, str]) -> str:
     previous = None
     while value != previous:
         previous = value
+        value = re.sub(r"%\{\?(\w+)\}", lambda match: globals_map.get(match.group(1), ""), value)
         value = re.sub(
             r"%\{(\w+)\}",
             lambda match: globals_map.get(match.group(1), match.group(0)),
@@ -42,7 +68,7 @@ def expand(value: str, globals_map: dict[str, str]) -> str:
 
 
 def parse_spec(path: Path) -> tuple[str, str, str]:
-    globals_map: dict[str, str] = {"dist": ".photon5"}
+    globals_map: dict[str, str] = {"dist": ".photon5", **SERIES}
     name = version = release = ""
 
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -70,7 +96,7 @@ def stage_nvrs(stage: str) -> list[tuple[str, str, str]]:
         raise SystemExit(f"ERROR: unknown stage '{stage}'")
 
     if stage == "php":
-        return [parse_spec(PROJECT_ROOT / "packaging/php85.spec")]
+        return [parse_spec(PROJECT_ROOT / "packaging/php.spec")]
 
     if stage.startswith("extension:"):
         return [parse_spec(STAGE_SPECS[stage][-1])]

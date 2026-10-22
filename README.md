@@ -275,7 +275,7 @@ The `gh-pages` branch is updated incrementally by CI workflows after each packag
 
 ### Manual PHP rebuild (without rebuilding bootstrap)
 
-Actions → **Build PHP 8.5 RPMs** → Run workflow. Uses bootstrap packages already on `gh-pages`.
+Actions → **Build PHP RPMs** → Run workflow. Uses bootstrap packages already on `gh-pages`.
 
 ### Manual Docker rebuild (without rebuilding RPMs)
 
@@ -283,14 +283,28 @@ Actions → **Docker PHP 8.5 (from published RPMs)** → Run workflow. Uses pack
 
 ## Updating PHP
 
-1. Update version in `packaging/macros.php85` and `packaging/php85.spec`
-2. Update `Source0` URL (auto-derived from `Version`)
-3. Update `extensions/macros.inc` with new PHP version
-4. Rebuild PECL extensions (API version may change)
-5. Run full test suite: `./scripts/build-rpm.sh all`
-6. Tag and release: `git tag php-8.5.X && git push origin php-8.5.X`
+PHP series are defined in `packaging/series/<NN>.conf` (`85`, `86`); the specs
+contain no hard-coded version. `scripts/build-rpm.sh` reads the series selected
+by `PHP_SERIES` (default `85`) and passes it to `rpmbuild` as macros.
 
-The build script auto-detects PHP API version from `php-config --phpapi` after building PHP core.
+1. Edit `PHP_VERSION` (and `PHP_PRERELEASE` for an RC) in `packaging/series/<NN>.conf`
+2. Add a changelog entry in `packaging/php.spec`
+3. Bump `Release` in `extensions/*.spec` so the extensions are rebuilt against the new PHP
+4. Build: `PHP_SERIES=85 ./scripts/build-rpm.sh all`
+5. Tag and release: `git tag php-8.5.X && git push origin php-8.5.X`
+
+Only one PHP series can be installed on a host at a time (`php85` and `php86`
+conflict); build each series in a separate container or CI run
+(`php_series` input of the **Build PHP RPMs** workflow).
+
+PHP 8.6 release candidates are fetched from the `php/php-src` GitHub tag, because RC
+tarballs are not published under `php.net/distributions`. A pre-release is packaged
+as `8.6.0-0.rcN.M` so that the final `8.6.0` upgrades it. For the final release,
+set `PHP_PRERELEASE=` and switch `PHP_SRCURL`/`PHP_SRCDIR` to the php.net values
+from `85.conf`.
+
+Extension sources come from the upstream VCS tags (GitHub), not from pecl.php.net,
+which is being retired in favour of PIE.
 
 ## Dependencies not in Photon OS
 

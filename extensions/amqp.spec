@@ -1,16 +1,16 @@
 %include macros.inc
 
-%define php85_extname amqp
+%define php_extname amqp
 
-Name:           php85-pecl-amqp
+Name:           php%{php_major}-pecl-amqp
 Version:        2.2.0
-Release:        3%{?dist}
-Summary:        PHP %{php85_ver} AMQP extension (PECL)
+Release:        4%{?dist}
+Summary:        PHP %{php_ver} AMQP extension (PECL)
 License:        PHP-3.01
-URL:            https://pecl.php.net/package/amqp
-Source0:        https://pecl.php.net/get/amqp-%{version}.tgz
+URL:            https://github.com/php-amqp/php-amqp
+Source0:        https://github.com/php-amqp/php-amqp/archive/v%{version}/amqp-%{version}.tar.gz
 
-BuildRequires:  php85-devel = %{php85_ver}
+BuildRequires:  php%{php_major}-devel = %{php_ver}
 BuildRequires:  gcc
 BuildRequires:  make
 BuildRequires:  autoconf
@@ -19,8 +19,8 @@ BuildRequires:  libtool
 BuildRequires:  pkg-config
 BuildRequires:  rabbitmq-c-devel
 
-Requires:       php85-common = %{php85_ver}
-Requires:       php85-cli = %{php85_ver}
+Requires:       php%{php_major}-common = %{php_ver}
+Requires:       php%{php_major}-cli = %{php_ver}
 Requires:       rabbitmq-c
 
 %description
@@ -28,7 +28,7 @@ The AMQP extension provides connectivity to RabbitMQ and other
 AMQP-compatible message brokers via the rabbitmq-c library.
 
 %prep
-%autosetup -n amqp-%{version}
+%autosetup -n php-amqp-%{version}
 
 %build
 export CFLAGS="-O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC"
@@ -39,22 +39,25 @@ export PKG_CONFIG_PATH=%{_libdir}/pkgconfig
 
 %install
 %make_install
-install -d %{buildroot}%{php85_extdir}
-install -d %{buildroot}%{php85_moddir}
+install -d %{buildroot}%{php_extdir}
+install -d %{buildroot}%{php_moddir}
 if [ ! -f modules/amqp.so ]; then
     echo "ERROR: amqp.so was not built" >&2
     exit 1
 fi
-install -m 0755 modules/amqp.so %{buildroot}%{php85_moddir}/amqp.so
-echo "extension=amqp.so" > %{buildroot}%{php85_extdir}/30-amqp.ini
+install -m 0755 modules/amqp.so %{buildroot}%{php_moddir}/amqp.so
+echo "extension=amqp.so" > %{buildroot}%{php_extdir}/30-amqp.ini
 find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 
 %files
 %defattr(-,root,root,-)
-%{php85_moddir}/amqp.so
-%config(noreplace) %{php85_extdir}/30-amqp.ini
+%{php_moddir}/amqp.so
+%config(noreplace) %{php_extdir}/30-amqp.ini
 
 %changelog
+* Thu Oct 22 2026 Photon PHP Build <build@photon-php.local> - 2.2.0-4
+- Fetch sources from GitHub instead of pecl.php.net
+
 * Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 2.2.0-3
 - Rebuild against PHP 8.5.12
 

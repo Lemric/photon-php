@@ -75,7 +75,7 @@ seed_output_from_published
 
 case "${STAGE}" in
     php)
-        log "=== Building PHP ${PHP_VERSION:-8.5.12} ==="
+        log "=== Building PHP series ${PHP_SERIES:-85} ==="
         scripts/build-rpm.sh php
         ;;
     extension:*)

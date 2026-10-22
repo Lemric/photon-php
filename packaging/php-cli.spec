@@ -1,5 +1,5 @@
-# php85-cli subpackage fragment
-# Included by php85.spec — do not build standalone.
+# php%{php_major}-cli subpackage fragment
+# Included by php%{php_major}.spec — do not build standalone.
 
 %package cli
 Summary:        Command-line interface for PHP %{version}
@@ -10,7 +10,7 @@ Requires:       zlib
 Requires:       libargon2
 
 %description cli
-The php85-cli package contains the PHP command-line executable.
+The php%{php_major}-cli package contains the PHP command-line executable.
 
 %files cli
 %defattr(-,root,root,-)

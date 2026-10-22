@@ -12,7 +12,7 @@ zend.exception_string_param_max_len = 0
 
 expose_php = Off
 
-extension_dir = /usr/lib64/php85/modules
+extension_dir = /usr/lib64/php@PHP_MAJOR@/modules
 
 max_execution_time = 30
 max_input_time = 60
@@ -25,7 +25,7 @@ log_errors_max_len = 1024
 ignore_repeated_errors = Off
 ignore_repeated_source = Off
 report_memleaks = On
-error_log = /var/log/php85-fpm/php_errors.log
+error_log = /var/log/php@PHP_MAJOR@-fpm/php_errors.log
 
 variables_order = "GPCS"
 request_order = "GP"

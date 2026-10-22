@@ -1,16 +1,16 @@
 %include macros.inc
 
-%define php85_extname imagick
+%define php_extname imagick
 
-Name:           php85-pecl-imagick
+Name:           php%{php_major}-pecl-imagick
 Version:        3.8.1
-Release:        3%{?dist}
-Summary:        PHP %{php85_ver} ImageMagick extension (PECL)
+Release:        4%{?dist}
+Summary:        PHP %{php_ver} ImageMagick extension (PECL)
 License:        PHP-3.01
-URL:            https://pecl.php.net/package/imagick
-Source0:        https://pecl.php.net/get/imagick-%{version}.tgz
+URL:            https://github.com/Imagick/imagick
+Source0:        https://github.com/Imagick/imagick/archive/%{version}/imagick-%{version}.tar.gz
 
-BuildRequires:  php85-devel = %{php85_ver}
+BuildRequires:  php%{php_major}-devel = %{php_ver}
 BuildRequires:  gcc
 BuildRequires:  make
 BuildRequires:  autoconf
@@ -19,8 +19,8 @@ BuildRequires:  libtool
 BuildRequires:  pkg-config
 BuildRequires:  ImageMagick-devel
 
-Requires:       php85-common = %{php85_ver}
-Requires:       php85-cli = %{php85_ver}
+Requires:       php%{php_major}-common = %{php_ver}
+Requires:       php%{php_major}-cli = %{php_ver}
 Requires:       ImageMagick
 
 %description
@@ -39,20 +39,23 @@ export PKG_CONFIG_PATH=%{_libdir}/pkgconfig
 
 %install
 %make_install
-install -d %{buildroot}%{php85_extdir}
-install -d %{buildroot}%{php85_moddir}
+install -d %{buildroot}%{php_extdir}
+install -d %{buildroot}%{php_moddir}
 if [ -f modules/imagick.so ]; then
-    install -m 0755 modules/imagick.so %{buildroot}%{php85_moddir}/imagick.so
+    install -m 0755 modules/imagick.so %{buildroot}%{php_moddir}/imagick.so
 fi
-echo "extension=imagick.so" > %{buildroot}%{php85_extdir}/30-imagick.ini
+echo "extension=imagick.so" > %{buildroot}%{php_extdir}/30-imagick.ini
 find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 
 %files
 %defattr(-,root,root,-)
-%{php85_moddir}/imagick.so
-%config(noreplace) %{php85_extdir}/30-imagick.ini
+%{php_moddir}/imagick.so
+%config(noreplace) %{php_extdir}/30-imagick.ini
 
 %changelog
+* Thu Oct 22 2026 Photon PHP Build <build@photon-php.local> - 3.8.1-4
+- Fetch sources from GitHub instead of pecl.php.net
+
 * Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 3.8.1-3
 - Rebuild against PHP 8.5.12
 

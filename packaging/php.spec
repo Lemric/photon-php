@@ -1,38 +1,39 @@
-# PHP 8.5 — main RPM spec for VMware Photon OS 5.x
-# Produces: php85, php85-common, php85-cli, php85-fpm, php85-devel,
-#           php85-opcache, php85-process, php85-mbstring, php85-intl,
-#           php85-xml, php85-curl, php85-gd, php85-zip, php85-bcmath,
-#           php85-sodium, php85-soap, php85-sockets, php85-pcntl,
-#           php85-mysqlnd, php85-pgsql
+# PHP — main RPM spec for VMware Photon OS 5.x
+# Produces php<NN>, php<NN>-common, php<NN>-cli, php<NN>-fpm, php<NN>-devel,
+# php<NN>-opcache, -process, -mbstring, -intl, -xml, -curl, -gd, -zip,
+# -bcmath, -sodium, -soap, -sockets, -pcntl, -mysqlnd, -pgsql.
+#
+# The PHP series is selected by scripts/build-rpm.sh (PHP_SERIES, default 85),
+# which passes these macros from packaging/series/<NN>.conf:
+#   php_major  php_branch  php_ver  php_srcver  php_srcurl  php_srcdir
+#   php_relpfx  php_conflicts
+# Pre-releases (RC) use Version=<x.y.z> and Release=0.<pre>.N so the final
+# release sorts higher; php_srcver carries the upstream tarball version.
 
-%global php85_ver          8.5.12
-%global php85_major        85
-%global php85_api          20250925
-%global php85_zend_api     420250925
-%global php85_confdir      /etc/php85
-%global php85_extdir       %{php85_confdir}/conf.d
-%global php85_moddir       /usr/lib64/php85/modules
-%global php85_includedir   /usr/include/php85
-%global php85_fpm_user     php-fpm
-%global php85_fpm_group    php-fpm
-%global php85_fpm_logdir   /var/log/php85-fpm
-%global php85_fpm_rundir   /run/php85-fpm
-%global php85_cflags       -O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC
-%global php85_cxxflags     -O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC
-%global php85_ldflags      -Wl,-z,relro -Wl,-z,now
+%global php_confdir      /etc/php%{php_major}
+%global php_extdir       %{php_confdir}/conf.d
+%global php_moddir       /usr/lib64/php%{php_major}/modules
+%global php_includedir   /usr/include/php%{php_major}
+%global php_fpm_user     php-fpm
+%global php_fpm_group    php-fpm
+%global php_fpm_logdir   /var/log/php%{php_major}-fpm
+%global php_fpm_rundir   /run/php%{php_major}-fpm
+%global php_cflags       -O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC
+%global php_cxxflags     -O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC
+%global php_ldflags      -Wl,-z,relro -Wl,-z,now
 %global debug_package %{nil}
 
-Name:           php85
-Version:        %{php85_ver}
-Release:        1%{?dist}
-Summary:        PHP scripting language (version 8.5)
+Name:           php%{php_major}
+Version:        %{php_ver}
+Release:        %{?php_relpfx}1%{?dist}
+Summary:        PHP scripting language (version %{php_branch})
 License:        PHP-3.01
 URL:            https://www.php.net/
-Source0:        https://www.php.net/distributions/php-%{version}.tar.xz
+Source0:        %{php_srcurl}
 Source1:        php.ini-production
 Source2:        php-fpm.conf
 Source3:        www.conf
-Source4:        php85-php-fpm.service
+Source4:        php-fpm.service
 Source5:        10-opcache.ini
 
 BuildRequires:  gcc
@@ -65,25 +66,26 @@ Provides:       php = %{version}
 Provides:       php-cli = %{version}
 Provides:       php-fpm = %{version}
 Provides:       php-common = %{version}
+%{?php_conflicts:Conflicts:      %{php_conflicts}}
 Requires:       %{name}-cli = %{version}-%{release}
 Requires:       %{name}-common = %{version}-%{release}
 
-%include php85-common.spec
-%include php85-cli.spec
-%include php85-fpm.spec
-%include php85-devel.spec
+%include php-common.spec
+%include php-cli.spec
+%include php-fpm.spec
+%include php-devel.spec
 
 %package opcache
 Summary:        OPcache configuration for PHP %{version}
 Requires:       %{name}-common = %{version}-%{release}
 
 %description opcache
-OPcache is built into PHP 8.5 and always loaded. This package installs
-production OPcache/JIT settings under %{php85_extdir}.
+OPcache is built into PHP %{php_branch} and always loaded. This package installs
+production OPcache/JIT settings under %{php_extdir}.
 
 %files opcache
 %defattr(-,root,root,-)
-%config(noreplace) %{php85_extdir}/10-opcache.ini
+%config(noreplace) %{php_extdir}/10-opcache.ini
 
 %package process
 Summary:        process extension for PHP %{version}
@@ -94,9 +96,9 @@ The process extension provides process control functions.
 
 %files process
 %defattr(-,root,root,-)
-%{php85_moddir}/sysvmsg.so
-%{php85_moddir}/sysvsem.so
-%{php85_moddir}/sysvshm.so
+%{php_moddir}/sysvmsg.so
+%{php_moddir}/sysvsem.so
+%{php_moddir}/sysvshm.so
 
 %package mbstring
 Summary:        mbstring extension for PHP %{version}
@@ -108,8 +110,8 @@ Multibyte string handling extension for PHP.
 
 %files mbstring
 %defattr(-,root,root,-)
-%{php85_moddir}/mbstring.so
-%config(noreplace) %{php85_extdir}/20-mbstring.ini
+%{php_moddir}/mbstring.so
+%config(noreplace) %{php_extdir}/20-mbstring.ini
 
 %package intl
 Summary:        intl extension for PHP %{version}
@@ -121,8 +123,8 @@ Internationalization extension for PHP.
 
 %files intl
 %defattr(-,root,root,-)
-%{php85_moddir}/intl.so
-%config(noreplace) %{php85_extdir}/20-intl.ini
+%{php_moddir}/intl.so
+%config(noreplace) %{php_extdir}/20-intl.ini
 
 %package xml
 Summary:        XML extensions for PHP %{version}
@@ -135,12 +137,12 @@ Built as shared modules for modular RPM packaging.
 
 %files xml
 %defattr(-,root,root,-)
-%{php85_moddir}/dom.so
-%{php85_moddir}/simplexml.so
-%{php85_moddir}/xml.so
-%{php85_moddir}/xmlreader.so
-%{php85_moddir}/xmlwriter.so
-%config(noreplace) %{php85_extdir}/20-xml.ini
+%{php_moddir}/dom.so
+%{php_moddir}/simplexml.so
+%{php_moddir}/xml.so
+%{php_moddir}/xmlreader.so
+%{php_moddir}/xmlwriter.so
+%config(noreplace) %{php_extdir}/20-xml.ini
 
 %package curl
 Summary:        curl extension for PHP %{version}
@@ -152,8 +154,8 @@ cURL extension for PHP.
 
 %files curl
 %defattr(-,root,root,-)
-%{php85_moddir}/curl.so
-%config(noreplace) %{php85_extdir}/20-curl.ini
+%{php_moddir}/curl.so
+%config(noreplace) %{php_extdir}/20-curl.ini
 
 %package gd
 Summary:        GD imaging extension for PHP %{version}
@@ -168,8 +170,8 @@ GD imaging library extension for PHP.
 
 %files gd
 %defattr(-,root,root,-)
-%{php85_moddir}/gd.so
-%config(noreplace) %{php85_extdir}/20-gd.ini
+%{php_moddir}/gd.so
+%config(noreplace) %{php_extdir}/20-gd.ini
 
 %package zip
 Summary:        zip extension for PHP %{version}
@@ -181,8 +183,8 @@ ZIP archive handling extension for PHP.
 
 %files zip
 %defattr(-,root,root,-)
-%{php85_moddir}/zip.so
-%config(noreplace) %{php85_extdir}/20-zip.ini
+%{php_moddir}/zip.so
+%config(noreplace) %{php_extdir}/20-zip.ini
 
 %package bcmath
 Summary:        bcmath extension for PHP %{version}
@@ -193,8 +195,8 @@ Arbitrary precision mathematics extension for PHP.
 
 %files bcmath
 %defattr(-,root,root,-)
-%{php85_moddir}/bcmath.so
-%config(noreplace) %{php85_extdir}/20-bcmath.ini
+%{php_moddir}/bcmath.so
+%config(noreplace) %{php_extdir}/20-bcmath.ini
 
 %package sodium
 Summary:        libsodium extension for PHP %{version}
@@ -206,8 +208,8 @@ The sodium extension provides a PHP binding for libsodium (Ed25519, XChaCha20-Po
 
 %files sodium
 %defattr(-,root,root,-)
-%{php85_moddir}/sodium.so
-%config(noreplace) %{php85_extdir}/20-sodium.ini
+%{php_moddir}/sodium.so
+%config(noreplace) %{php_extdir}/20-sodium.ini
 
 %package soap
 Summary:        SOAP extension for PHP %{version}
@@ -219,8 +221,8 @@ SOAP protocol extension for PHP.
 
 %files soap
 %defattr(-,root,root,-)
-%{php85_moddir}/soap.so
-%config(noreplace) %{php85_extdir}/20-soap.ini
+%{php_moddir}/soap.so
+%config(noreplace) %{php_extdir}/20-soap.ini
 
 %package sockets
 Summary:        sockets extension for PHP %{version}
@@ -231,8 +233,8 @@ Low-level socket interface extension for PHP.
 
 %files sockets
 %defattr(-,root,root,-)
-%{php85_moddir}/sockets.so
-%config(noreplace) %{php85_extdir}/20-sockets.ini
+%{php_moddir}/sockets.so
+%config(noreplace) %{php_extdir}/20-sockets.ini
 
 %package pcntl
 Summary:        pcntl extension for PHP %{version}
@@ -243,8 +245,8 @@ Process Control extension for PHP (CLI only).
 
 %files pcntl
 %defattr(-,root,root,-)
-%{php85_moddir}/pcntl.so
-%config(noreplace) %{php85_extdir}/20-pcntl.ini
+%{php_moddir}/pcntl.so
+%config(noreplace) %{php_extdir}/20-pcntl.ini
 
 %package mysqlnd
 Summary:        MySQL Native Driver extensions for PHP %{version}
@@ -255,9 +257,9 @@ MySQL Native Driver with mysqli and PDO MySQL extensions.
 
 %files mysqlnd
 %defattr(-,root,root,-)
-%{php85_moddir}/mysqli.so
-%{php85_moddir}/pdo_mysql.so
-%config(noreplace) %{php85_extdir}/20-mysqlnd.ini
+%{php_moddir}/mysqli.so
+%{php_moddir}/pdo_mysql.so
+%config(noreplace) %{php_extdir}/20-mysqlnd.ini
 
 %package pgsql
 Summary:        PostgreSQL extensions for PHP %{version}
@@ -269,36 +271,36 @@ PostgreSQL database extensions (pgsql and pdo_pgsql) for PHP.
 
 %files pgsql
 %defattr(-,root,root,-)
-%{php85_moddir}/pgsql.so
-%{php85_moddir}/pdo_pgsql.so
-%config(noreplace) %{php85_extdir}/20-pgsql.ini
+%{php_moddir}/pgsql.so
+%{php_moddir}/pdo_pgsql.so
+%config(noreplace) %{php_extdir}/20-pgsql.ini
 
 %description
 PHP is an HTML-embedded scripting language. This meta-package pulls in
 the PHP %{version} CLI interpreter and common files.
 
 %prep
-%autosetup -n php-%{version}
+%autosetup -n %{php_srcdir}
 
 %build
-export CFLAGS="%{php85_cflags}"
-export CXXFLAGS="%{php85_cxxflags}"
-export LDFLAGS="%{php85_ldflags}"
+export CFLAGS="%{php_cflags}"
+export CXXFLAGS="%{php_cxxflags}"
+export LDFLAGS="%{php_ldflags}"
 
 ./buildconf --force
 
 ./configure \
     --prefix=/usr \
     --exec-prefix=/usr \
-    --sysconfdir=%{php85_confdir} \
-    --with-config-file-path=%{php85_confdir} \
-    --with-config-file-scan-dir=%{php85_extdir} \
+    --sysconfdir=%{php_confdir} \
+    --with-config-file-path=%{php_confdir} \
+    --with-config-file-scan-dir=%{php_extdir} \
     --libdir=%{_libdir} \
-    --includedir=%{php85_includedir} \
+    --includedir=%{php_includedir} \
     --localstatedir=/var \
     --enable-fpm \
-    --with-fpm-user=%{php85_fpm_user} \
-    --with-fpm-group=%{php85_fpm_group} \
+    --with-fpm-user=%{php_fpm_user} \
+    --with-fpm-group=%{php_fpm_group} \
     --with-fpm-acl \
     --enable-cli \
     --enable-bcmath=shared \
@@ -348,27 +350,30 @@ export LDFLAGS="%{php85_ldflags}"
 # into the build container's real filesystem and leave BUILDROOT empty.
 make install INSTALL_ROOT=%{buildroot}
 
-install -d %{buildroot}%{php85_confdir}
-install -d %{buildroot}%{php85_extdir}
-install -d %{buildroot}%{php85_moddir}
-install -d %{buildroot}%{php85_fpm_logdir}
-install -d %{buildroot}%{php85_fpm_rundir}
-install -d %{buildroot}/var/lib/php85-fpm
+# Config templates carry @PHP_MAJOR@ placeholders for versioned paths.
+render() { sed 's/@PHP_MAJOR@/%{php_major}/g' "$1" > "$2" && chmod 0644 "$2"; }
+
+install -d %{buildroot}%{php_confdir}
+install -d %{buildroot}%{php_extdir}
+install -d %{buildroot}%{php_moddir}
+install -d %{buildroot}%{php_fpm_logdir}
+install -d %{buildroot}%{php_fpm_rundir}
+install -d %{buildroot}/var/lib/php%{php_major}-fpm
 install -d %{buildroot}%{_unitdir}
 
-install -m 0644 %{SOURCE1} %{buildroot}%{php85_confdir}/php.ini
-install -m 0644 %{SOURCE2} %{buildroot}%{php85_confdir}/php-fpm.conf
-install -d %{buildroot}%{php85_confdir}/php-fpm.d
-install -m 0644 %{SOURCE3} %{buildroot}%{php85_confdir}/php-fpm.d/www.conf
-install -m 0644 %{SOURCE4} %{buildroot}%{_unitdir}/php85-php-fpm.service
-install -m 0644 %{SOURCE5} %{buildroot}%{php85_extdir}/10-opcache.ini
-echo "extension=pdo.so" > %{buildroot}%{php85_extdir}/15-pdo.ini
+render %{SOURCE1} %{buildroot}%{php_confdir}/php.ini
+render %{SOURCE2} %{buildroot}%{php_confdir}/php-fpm.conf
+install -d %{buildroot}%{php_confdir}/php-fpm.d
+render %{SOURCE3} %{buildroot}%{php_confdir}/php-fpm.d/www.conf
+render %{SOURCE4} %{buildroot}%{_unitdir}/php%{php_major}-php-fpm.service
+render %{SOURCE5} %{buildroot}%{php_extdir}/10-opcache.ini
+echo "extension=pdo.so" > %{buildroot}%{php_extdir}/15-pdo.ini
 
 for ext in mbstring intl curl gd zip bcmath sodium soap sockets pcntl; do
-    echo "extension=${ext}.so" > %{buildroot}%{php85_extdir}/20-${ext}.ini
+    echo "extension=${ext}.so" > %{buildroot}%{php_extdir}/20-${ext}.ini
 done
 
-cat > %{buildroot}%{php85_extdir}/20-xml.ini << 'XMLEOF'
+cat > %{buildroot}%{php_extdir}/20-xml.ini << 'XMLEOF'
 extension=dom.so
 extension=simplexml.so
 extension=xml.so
@@ -376,37 +381,37 @@ extension=xmlreader.so
 extension=xmlwriter.so
 XMLEOF
 
-cat > %{buildroot}%{php85_extdir}/20-mysqlnd.ini << 'MYSQLEOF'
+cat > %{buildroot}%{php_extdir}/20-mysqlnd.ini << 'MYSQLEOF'
 extension=mysqli.so
 extension=pdo_mysql.so
 MYSQLEOF
 
-cat > %{buildroot}%{php85_extdir}/20-pgsql.ini << 'PGSQLEOF'
+cat > %{buildroot}%{php_extdir}/20-pgsql.ini << 'PGSQLEOF'
 extension=pgsql.so
 extension=pdo_pgsql.so
 PGSQLEOF
 
 # PHP 8.x installs shared extensions under $libdir/php/extensions/<build>-<api>/,
 # not under php/modules/ (that path is used by older layouts and PECL builds).
-find %{buildroot}%{_libdir}/php/extensions -name '*.so' -exec mv {} %{buildroot}%{php85_moddir}/ \; 2>/dev/null || true
-find %{buildroot}%{_libdir} -path '*/php/modules/*.so' -exec mv {} %{buildroot}%{php85_moddir}/ \; 2>/dev/null || true
+find %{buildroot}%{_libdir}/php/extensions -name '*.so' -exec mv {} %{buildroot}%{php_moddir}/ \; 2>/dev/null || true
+find %{buildroot}%{_libdir} -path '*/php/modules/*.so' -exec mv {} %{buildroot}%{php_moddir}/ \; 2>/dev/null || true
 
 if [ -f %{buildroot}%{_libdir}/libphp.so ]; then
-    mv %{buildroot}%{_libdir}/libphp.so %{buildroot}%{_libdir}/libphp85.so
+    mv %{buildroot}%{_libdir}/libphp.so %{buildroot}%{_libdir}/libphp%{php_major}.so
 fi
 
-find %{buildroot}%{php85_moddir} -name '*.so' -exec strip --strip-unneeded {} \;
+find %{buildroot}%{php_moddir} -name '*.so' -exec strip --strip-unneeded {} \;
 
 missing=""
 for mod in pdo bcmath mbstring intl dom simplexml xml xmlreader xmlwriter curl gd zip sodium \
            soap sockets pcntl sysvmsg sysvsem sysvshm mysqli pdo_mysql pgsql pdo_pgsql; do
-    if [ ! -f %{buildroot}%{php85_moddir}/${mod}.so ]; then
+    if [ ! -f %{buildroot}%{php_moddir}/${mod}.so ]; then
         missing="${missing} ${mod}.so"
     fi
 done
 if [ -n "${missing}" ]; then
     echo "ERROR: missing shared modules:${missing}" >&2
-    ls -la %{buildroot}%{php85_moddir}/ >&2 || true
+    ls -la %{buildroot}%{php_moddir}/ >&2 || true
     exit 1
 fi
 
@@ -417,12 +422,12 @@ if [ -d %{buildroot}/usr/php/man ]; then
 fi
 rm -rf %{buildroot}/usr/php
 
-rm -f %{buildroot}%{php85_confdir}/php-fpm.conf.default
+rm -f %{buildroot}%{php_confdir}/php-fpm.conf.default
 
 # Keep %{_libdir}/php/build for phpize; drop runtime extension trees.
 rm -rf %{buildroot}%{_libdir}/php/modules 2>/dev/null || true
 rm -rf %{buildroot}%{_libdir}/php/extensions 2>/dev/null || true
-rm -rf %{buildroot}%{_libdir}/php85
+rm -rf %{buildroot}%{_libdir}/php%{php_major}
 rm -rf %{buildroot}%{_datadir}/php
 rm -rf %{buildroot}%{_localstatedir}/log/php-fpm.log 2>/dev/null || true
 

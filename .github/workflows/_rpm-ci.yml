@@ -22,6 +22,11 @@ on:
         required: false
         type: string
         default: '8.5.12'
+      php_series:
+        description: 'PHP series to build (packaging/series/<NN>.conf), e.g. 85 or 86'
+        required: false
+        type: string
+        default: '85'
       publish_branch:
         description: 'Branch with published RPMs'
         required: false
@@ -56,6 +61,7 @@ permissions:
 
 env:
   PHP_VERSION: ${{ inputs.php_version }}
+  PHP_SERIES: ${{ inputs.php_series }}
   PHOTON_VERSION: '5.0'
   REPO_BASEURL: https://pkgs.photon.lemric.com
   PUBLISH_BRANCH: ${{ inputs.publish_branch }}
@@ -569,8 +575,10 @@ jobs:
       - name: Test installation and functionality
         env:
           PHOTON_VERSION: ${{ env.PHOTON_VERSION }}
+          PHP_SERIES: ${{ env.PHP_SERIES }}
         run: |
-          if ! ls "published/${{ matrix.arch }}"/php85-8*.rpm >/dev/null 2>&1; then
+          PHP_BRANCH="${PHP_SERIES:0:1}.${PHP_SERIES:1}"
+          if ! ls "published/${{ matrix.arch }}"/php${PHP_SERIES}-[0-9]*.rpm >/dev/null 2>&1; then
             echo "PHP packages not published yet for ${{ matrix.arch }} — skipping"
             exit 0
           fi
@@ -593,15 +601,15 @@ jobs:
               pick_latest() { ls -1 /repo/\$1 2>/dev/null | sort -V | tail -1; }
 
               tdnf install -y /repo/libzip-[0-9]*.rpm /repo/rabbitmq-c-[0-9]*.rpm \
-                /repo/php85-common-*.rpm /repo/php85-cli-*.rpm /repo/php85-fpm-*.rpm \
-                /repo/php85-opcache-*.rpm /repo/php85-mbstring-*.rpm /repo/php85-intl-*.rpm \
-                /repo/php85-xml-*.rpm /repo/php85-curl-*.rpm /repo/php85-gd-*.rpm \
-                /repo/php85-zip-*.rpm /repo/php85-bcmath-*.rpm /repo/php85-sodium-*.rpm \
-                /repo/php85-mysqlnd-*.rpm /repo/php85-pgsql-*.rpm /repo/php85-8*.rpm \
-                \"\$(pick_latest 'php85-pecl-redis-*.rpm')\" \
-                \"\$(pick_latest 'php85-pecl-igbinary-*.rpm')\"
+                /repo/php${PHP_SERIES}-common-*.rpm /repo/php${PHP_SERIES}-cli-*.rpm /repo/php${PHP_SERIES}-fpm-*.rpm \
+                /repo/php${PHP_SERIES}-opcache-*.rpm /repo/php${PHP_SERIES}-mbstring-*.rpm /repo/php${PHP_SERIES}-intl-*.rpm \
+                /repo/php${PHP_SERIES}-xml-*.rpm /repo/php${PHP_SERIES}-curl-*.rpm /repo/php${PHP_SERIES}-gd-*.rpm \
+                /repo/php${PHP_SERIES}-zip-*.rpm /repo/php${PHP_SERIES}-bcmath-*.rpm /repo/php${PHP_SERIES}-sodium-*.rpm \
+                /repo/php${PHP_SERIES}-mysqlnd-*.rpm /repo/php${PHP_SERIES}-pgsql-*.rpm /repo/php${PHP_SERIES}-[0-9]*.rpm \
+                \"\$(pick_latest 'php${PHP_SERIES}-pecl-redis-*.rpm')\" \
+                \"\$(pick_latest 'php${PHP_SERIES}-pecl-igbinary-*.rpm')\"
 
-              php -v | grep -E 'PHP 8\.5\.[0-9]+'
+              php -v | grep -E \"PHP ${PHP_BRANCH}[.][0-9]+\"
               php -m | grep -Ei '^(Zend OPcache|mbstring|intl|curl|gd|zip|bcmath|sodium|dom|xml|mysqli|pdo_mysql|pgsql|pdo_pgsql|redis|igbinary)$'
               php -r 'exit(defined(\"PASSWORD_ARGON2ID\") ? 0 : 1);'
               php-fpm -t

@@ -1,24 +1,24 @@
 %include macros.inc
 
-%define php85_extname igbinary
+%define php_extname igbinary
 
-Name:           php85-pecl-igbinary
+Name:           php%{php_major}-pecl-igbinary
 Version:        3.2.17RC1
-Release:        4%{?dist}
-Summary:        PHP %{php85_ver} igbinary serializer extension (PECL)
+Release:        5%{?dist}
+Summary:        PHP %{php_ver} igbinary serializer extension (PECL)
 License:        PHP-3.01
-URL:            https://pecl.php.net/package/igbinary
-Source0:        https://pecl.php.net/get/igbinary-%{version}.tgz
+URL:            https://github.com/igbinary/igbinary
+Source0:        https://github.com/igbinary/igbinary/archive/%{version}/igbinary-%{version}.tar.gz
 
-BuildRequires:  php85-devel = %{php85_ver}
+BuildRequires:  php%{php_major}-devel = %{php_ver}
 BuildRequires:  gcc
 BuildRequires:  make
 BuildRequires:  autoconf
 BuildRequires:  automake
 BuildRequires:  libtool
 
-Requires:       php85-common = %{php85_ver}
-Requires:       php85-cli = %{php85_ver}
+Requires:       php%{php_major}-common = %{php_ver}
+Requires:       php%{php_major}-cli = %{php_ver}
 
 %description
 Igbinary is a drop-in replacement for the standard PHP serializer.
@@ -35,28 +35,31 @@ export CFLAGS="-O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC"
 
 %install
 %make_install
-install -d %{buildroot}%{php85_extdir}
-install -d %{buildroot}%{php85_moddir}
+install -d %{buildroot}%{php_extdir}
+install -d %{buildroot}%{php_moddir}
 if [ ! -f modules/igbinary.so ]; then
     echo "ERROR: igbinary.so was not built" >&2
     exit 1
 fi
-install -m 0755 modules/igbinary.so %{buildroot}%{php85_moddir}/igbinary.so
-echo "extension=igbinary.so" > %{buildroot}%{php85_extdir}/30-igbinary.ini
-install -d %{buildroot}/usr/include/php85/php/ext/igbinary
+install -m 0755 modules/igbinary.so %{buildroot}%{php_moddir}/igbinary.so
+echo "extension=igbinary.so" > %{buildroot}%{php_extdir}/30-igbinary.ini
+install -d %{buildroot}/usr/include/php%{php_major}/php/ext/igbinary
 install -m 0644 igbinary.h php_igbinary.h \
-    %{buildroot}/usr/include/php85/php/ext/igbinary/
+    %{buildroot}/usr/include/php%{php_major}/php/ext/igbinary/
 install -m 0644 src/php7/igbinary.h src/php7/php_igbinary.h \
-    %{buildroot}/usr/include/php85/php/ext/igbinary/
+    %{buildroot}/usr/include/php%{php_major}/php/ext/igbinary/
 find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 
 %files
 %defattr(-,root,root,-)
-%{php85_moddir}/igbinary.so
-%config(noreplace) %{php85_extdir}/30-igbinary.ini
-/usr/include/php85/php/ext/igbinary/
+%{php_moddir}/igbinary.so
+%config(noreplace) %{php_extdir}/30-igbinary.ini
+/usr/include/php%{php_major}/php/ext/igbinary/
 
 %changelog
+* Thu Oct 22 2026 Photon PHP Build <build@photon-php.local> - 3.2.17RC1-5
+- Fetch sources from GitHub instead of pecl.php.net
+
 * Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 3.2.17RC1-4
 - Rebuild against PHP 8.5.12
 

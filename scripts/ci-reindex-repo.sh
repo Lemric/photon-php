@@ -74,7 +74,7 @@ manifest = {
     "name": existing.get("name", "photon-php"),
     "description": existing.get(
         "description",
-        "PHP 8.5 RPM repository for VMware Photon OS 5.x",
+        "PHP RPM repository for VMware Photon OS 5.x",
     ),
     "baseurl": baseurl,
     "php_version": php_version,

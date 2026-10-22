@@ -7,6 +7,8 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # shellcheck source=rpm-gpg-common.sh
 source "${SCRIPT_DIR}/rpm-gpg-common.sh"
+# shellcheck source=php-series.sh
+source "${SCRIPT_DIR}/php-series.sh"
 
 ARCH="${ARCH:-$(uname -m)}"
 REPO_DIR="${REPO_DIR:-${PROJECT_ROOT}/repo/${ARCH}}"
@@ -44,16 +46,16 @@ done
 cat > "${OUTPUT_DIR}/repodata.json" << EOF
 {
   "name": "photon-php",
-  "description": "PHP 8.5 RPM repository for VMware Photon OS 5.x",
+  "description": "PHP RPM repository for VMware Photon OS 5.x",
   "baseurl": "${REPO_BASEURL}",
   "architectures": ["x86_64", "aarch64"],
   "packages": [
-    "php85", "php85-cli", "php85-fpm", "php85-common", "php85-devel",
-    "php85-opcache", "php85-mbstring", "php85-intl", "php85-xml",
-    "php85-curl", "php85-gd", "php85-zip", "php85-bcmath", "php85-sodium", "php85-soap",
-    "php85-sockets", "php85-pcntl", "php85-mysqlnd", "php85-pgsql",
-    "php85-pecl-redis", "php85-pecl-igbinary", "php85-pecl-apcu",
-    "php85-pecl-amqp", "php85-pecl-imagick", "php85-pecl-xdebug"
+    "php${PHP_MAJOR}", "php${PHP_MAJOR}-cli", "php${PHP_MAJOR}-fpm", "php${PHP_MAJOR}-common", "php${PHP_MAJOR}-devel",
+    "php${PHP_MAJOR}-opcache", "php${PHP_MAJOR}-mbstring", "php${PHP_MAJOR}-intl", "php${PHP_MAJOR}-xml",
+    "php${PHP_MAJOR}-curl", "php${PHP_MAJOR}-gd", "php${PHP_MAJOR}-zip", "php${PHP_MAJOR}-bcmath", "php${PHP_MAJOR}-sodium", "php${PHP_MAJOR}-soap",
+    "php${PHP_MAJOR}-sockets", "php${PHP_MAJOR}-pcntl", "php${PHP_MAJOR}-mysqlnd", "php${PHP_MAJOR}-pgsql",
+    "php${PHP_MAJOR}-pecl-redis", "php${PHP_MAJOR}-pecl-igbinary", "php${PHP_MAJOR}-pecl-apcu",
+    "php${PHP_MAJOR}-pecl-amqp", "php${PHP_MAJOR}-pecl-imagick", "php${PHP_MAJOR}-pecl-xdebug"
   ]
 }
 EOF
@@ -63,7 +65,7 @@ log "Public URL: ${REPO_BASEURL}/${ARCH}"
 log "Configure tdnf:"
 echo ""
 echo "  [photon-php]"
-echo "  name=Photon PHP 8.5"
+echo "  name=Photon PHP"
 echo "  baseurl=${REPO_BASEURL}/${ARCH}"
 echo "  enabled=1"
 rpm_gpg_repo_file_snippet "${REPO_BASEURL}/\${ARCH}" "${REPO_BASEURL}/${RPM_GPG_KEY_FILE_NAME}"

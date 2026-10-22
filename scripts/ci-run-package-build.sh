@@ -31,6 +31,7 @@ docker_args=(
     -e "RPMBUILD_DIR=/build/.rpmbuild-${ARCH}"
     -e "REPO_BASEURL=${REPO_BASEURL:-https://pkgs.photon.lemric.com}"
     -e "PHP_VERSION=${PHP_VERSION:-8.5.12}"
+    -e "PHP_SERIES=${PHP_SERIES:-85}"
     -e "RPM_GPG_SIGN_RPMS=0"
     -e "RPM_GPG_SIGN_METADATA=0"
 )

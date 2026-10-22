@@ -5,18 +5,18 @@ After=network.target
 
 [Service]
 Type=notify
-ExecStart=/usr/sbin/php-fpm --nodaemonize --fpm-config /etc/php85/php-fpm.conf
+ExecStart=/usr/sbin/php-fpm --nodaemonize --fpm-config /etc/php@PHP_MAJOR@/php-fpm.conf
 ExecReload=/bin/kill -USR2 $MAINPID
-PIDFile=/run/php85-fpm/php-fpm.pid
-RuntimeDirectory=php85-fpm
+PIDFile=/run/php@PHP_MAJOR@-fpm/php-fpm.pid
+RuntimeDirectory=php@PHP_MAJOR@-fpm
 RuntimeDirectoryMode=0755
-LogsDirectory=php85-fpm
+LogsDirectory=php@PHP_MAJOR@-fpm
 LogsDirectoryMode=0755
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 NoNewPrivileges=true
-ReadWritePaths=/var/log/php85-fpm /var/lib/php85-fpm /run/php85-fpm
+ReadWritePaths=/var/log/php@PHP_MAJOR@-fpm /var/lib/php@PHP_MAJOR@-fpm /run/php@PHP_MAJOR@-fpm
 AmbientCapabilities=
 CapabilityBoundingSet=
 LockPersonality=true

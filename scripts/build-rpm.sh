@@ -1,12 +1,15 @@
 #!/bin/bash
-# build-rpm.sh — Build PHP 8.5 and PECL extension RPMs for Photon OS
+# build-rpm.sh — Build PHP and PECL-extension RPMs for Photon OS
+#
+# PHP_SERIES selects the PHP series (packaging/series/<NN>.conf), default 85.
+# Extensions are built from upstream VCS tarballs, not from pecl.php.net.
 #
 # Dependency order (each stage installs into the local repo, then tdnf):
-#   1. re2c      — Photon ships 1.x; PHP 8.5 needs >= 3.x
-#   2. libzip    — not in Photon repos; required by php85-zip
-#   3. rabbitmq-c — not in Photon repos; required by php85-pecl-amqp
-#   4. php85     — requires re2c >= 3 and libzip-devel
-#   5. extensions — require php85-devel
+#   1. re2c      — Photon ships 1.x; PHP needs >= 3.x
+#   2. libzip    — not in Photon repos; required by php<NN>-zip
+#   3. rabbitmq-c — not in Photon repos; required by php<NN>-pecl-amqp
+#   4. php<NN>     — requires re2c >= 3 and libzip-devel
+#   5. extensions — require php<NN>-devel
 #
 set -euo pipefail
 
@@ -15,8 +18,9 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # shellcheck source=rpm-gpg-common.sh
 source "${SCRIPT_DIR}/rpm-gpg-common.sh"
+# shellcheck source=php-series.sh
+source "${SCRIPT_DIR}/php-series.sh"
 
-PHP_VERSION="${PHP_VERSION:-8.5.12}"
 ARCH="${ARCH:-$(uname -m)}"
 DIST="${DIST:-photon5}"
 RELEASE="${RELEASE:-1}"
@@ -25,8 +29,6 @@ TARGET="${1:-all}"
 RPMBUILD_DIR="${RPMBUILD_DIR:-${PROJECT_ROOT}/.rpmbuild}"
 OUTPUT_DIR="${OUTPUT_DIR:-${PROJECT_ROOT}/repo/${ARCH}}"
 PUBLISHED_DIR="${PUBLISHED_DIR:-}"
-
-MACROS_FILE="${PROJECT_ROOT}/packaging/macros.php85"
 
 # Ordered stages — do not reorder without updating BuildRequires in specs.
 BUILD_STAGES=(re2c libzip rabbitmq-c php extensions)
@@ -90,46 +92,46 @@ rabbitmq_c_installed() {
 }
 
 igbinary_build_headers_installed() {
-    test -f /usr/include/php85/php/ext/igbinary/igbinary.h
+    test -f /usr/include/php${PHP_MAJOR}/php/ext/igbinary/igbinary.h
 }
 
 ensure_igbinary() {
     if igbinary_build_headers_installed; then
-        log "php85-pecl-igbinary headers already installed"
+        log "php${PHP_MAJOR}-pecl-igbinary headers already installed"
         return 0
     fi
-    if [ -n "$(binary_rpms_in_output "php85-pecl-igbinary-*.${ARCH}.rpm")" ]; then
-        log "Installing pre-built php85-pecl-igbinary from local/published repo"
-        install_from_local_repo php85-pecl-igbinary
+    if [ -n "$(binary_rpms_in_output "php${PHP_MAJOR}-pecl-igbinary-*.${ARCH}.rpm")" ]; then
+        log "Installing pre-built php${PHP_MAJOR}-pecl-igbinary from local/published repo"
+        install_from_local_repo php${PHP_MAJOR}-pecl-igbinary
         igbinary_build_headers_installed && return 0
     fi
-    log "Building php85-pecl-igbinary (redis requires igbinary.h headers)"
+    log "Building php${PHP_MAJOR}-pecl-igbinary (redis requires igbinary.h headers)"
     build_spec "${PROJECT_ROOT}/extensions/igbinary.spec"
-    install_from_local_repo php85-pecl-igbinary
+    install_from_local_repo php${PHP_MAJOR}-pecl-igbinary
     igbinary_build_headers_installed || {
-        log "ERROR: php85-pecl-igbinary with headers required before building redis" >&2
+        log "ERROR: php${PHP_MAJOR}-pecl-igbinary with headers required before building redis" >&2
         return 1
     }
 }
 
-php85_devel_installed() {
-    rpm -q php85-devel >/dev/null 2>&1
+php_devel_installed() {
+    rpm -q php${PHP_MAJOR}-devel >/dev/null 2>&1
 }
 
-install_php85_stack() {
+install_php_stack() {
     local rpms
     rpms="$(
-        find "${OUTPUT_DIR}" -maxdepth 1 -name "php85*.${ARCH}.rpm" \
-            ! -name 'php85-pecl-*' ! -name '*.src.rpm' -type f 2>/dev/null \
+        find "${OUTPUT_DIR}" -maxdepth 1 -name "php${PHP_MAJOR}*.${ARCH}.rpm" \
+            ! -name "php${PHP_MAJOR}-pecl-*" ! -name '*.src.rpm' -type f 2>/dev/null \
             | sort | tr '\n' ' '
     )"
     if [ -z "${rpms}" ]; then
-        log "ERROR: php85 packages not found in ${OUTPUT_DIR}" >&2
+        log "ERROR: php${PHP_MAJOR} packages not found in ${OUTPUT_DIR}" >&2
         return 1
     fi
     refresh_local_repo
     log "Installing PHP stack (single transaction for circular Requires)"
-    # php85 <-> php85-common have circular Requires — one rpm -Uvh for all core packages.
+    # php${PHP_MAJOR} <-> php${PHP_MAJOR}-common have circular Requires — one rpm -Uvh for all core packages.
     # shellcheck disable=SC2086
     rpm -Uvh --replacepkgs ${rpms}
 }
@@ -150,8 +152,9 @@ fetch_remote_sources() {
         return 1
     fi
 
-    # Run rpmspec from SPECS/ so %include fragments (php85-*.spec, macros.inc) resolve.
+    # Run rpmspec from SPECS/ so %include fragments (php-*.spec, macros.inc) resolve.
     urls="$(cd "${spec_dir}" && rpmspec -P \
+        "${PHP_RPM_DEFINES[@]}" \
         --define "_topdir ${RPMBUILD_DIR}" \
         --define "dist .${DIST}" \
         "${spec_name}" 2>/dev/null \
@@ -161,10 +164,12 @@ fetch_remote_sources() {
     if [ -z "${urls}" ]; then
         local version="" name=""
         version="$(cd "${spec_dir}" && rpmspec -q --qf '%{version}' \
+            "${PHP_RPM_DEFINES[@]}" \
             --define "_topdir ${RPMBUILD_DIR}" \
             --define "dist .${DIST}" \
             "${spec_name}" 2>/dev/null || true)"
         name="$(cd "${spec_dir}" && rpmspec -q --qf '%{name}' \
+            "${PHP_RPM_DEFINES[@]}" \
             --define "_topdir ${RPMBUILD_DIR}" \
             --define "dist .${DIST}" \
             "${spec_name}" 2>/dev/null || true)"
@@ -210,8 +215,8 @@ build_spec() {
 
     cp -f "${spec_file}" "${RPMBUILD_DIR}/SPECS/${spec_name}"
 
-    if [[ "${spec_name}" == "php85.spec" ]]; then
-        cp -f "${PROJECT_ROOT}/packaging/php85-"*.spec "${RPMBUILD_DIR}/SPECS/"
+    if [[ "${spec_name}" == "php.spec" ]]; then
+        cp -f "${PROJECT_ROOT}/packaging/php-"*.spec "${RPMBUILD_DIR}/SPECS/"
         cp -f "${PROJECT_ROOT}/packaging/configs/"* "${RPMBUILD_DIR}/SOURCES/"
     fi
 
@@ -222,6 +227,7 @@ build_spec() {
     fetch_remote_sources "${spec_file}"
 
     (cd "${RPMBUILD_DIR}/SPECS" && rpmbuild -ba \
+        "${PHP_RPM_DEFINES[@]}" \
         --define "_topdir ${RPMBUILD_DIR}" \
         --define "_sourcedir ${RPMBUILD_DIR}/SOURCES" \
         --define "dist .${DIST}" \
@@ -239,24 +245,6 @@ build_spec() {
     done
 
     refresh_local_repo
-}
-
-detect_php_api() {
-    if ! command -v php-config >/dev/null 2>&1; then
-        return 0
-    fi
-
-    local extdir api zend_api
-    extdir="$(php-config --extension-dir 2>/dev/null || true)"
-    api="${extdir##*-}"
-    if [[ "${api}" =~ ^[0-9]{8}$ ]]; then
-        zend_api="4${api}"
-        log "Detected PHP API version: ${api} (zend ${zend_api})"
-        sed -i "s/%global php85_api.*/%global php85_api          ${api}/" "${MACROS_FILE}" 2>/dev/null || \
-            sed -i '' "s/%global php85_api.*/%global php85_api          ${api}/" "${MACROS_FILE}" 2>/dev/null || true
-        sed -i "s/%define php85_zend_api.*/%define php85_zend_api ${zend_api}/" "${MACROS_FILE}" 2>/dev/null || \
-            sed -i '' "s/%define php85_zend_api.*/%define php85_zend_api ${zend_api}/" "${MACROS_FILE}" 2>/dev/null || true
-    fi
 }
 
 ensure_re2c() {
@@ -305,20 +293,20 @@ ensure_rabbitmq_c() {
 }
 
 ensure_php() {
-    if php85_devel_installed; then
-        log "php85-devel already installed"
+    if php_devel_installed; then
+        log "php${PHP_MAJOR}-devel already installed"
         return 0
     fi
-    if [ -n "$(binary_rpms_in_output "php85-devel-*.${ARCH}.rpm")" ]; then
-        log "Installing pre-built php85 from ${OUTPUT_DIR}"
-        install_php85_stack
-        php85_devel_installed && return 0
+    if [ -n "$(binary_rpms_in_output "php${PHP_MAJOR}-devel-*.${ARCH}.rpm")" ]; then
+        log "Installing pre-built php${PHP_MAJOR} from ${OUTPUT_DIR}"
+        install_php_stack
+        php_devel_installed && return 0
     fi
     build_php
 }
 
 build_re2c() {
-    log "Stage 1/5: re2c >= 3.x (PHP 8.5 build dependency)"
+    log "Stage 1/5: re2c >= 3.x (PHP build dependency)"
     build_spec "${PROJECT_ROOT}/packaging/re2c.spec"
     install_from_local_repo re2c
     re2c_version_ok || { log "ERROR: re2c >= 3 not available after install"; exit 1; }
@@ -326,31 +314,30 @@ build_re2c() {
 }
 
 build_libzip() {
-    log "Stage 2/5: libzip (php85-zip dependency)"
+    log "Stage 2/5: libzip (php${PHP_MAJOR}-zip dependency)"
     build_spec "${PROJECT_ROOT}/packaging/libzip.spec"
     install_from_local_repo libzip
     install_from_local_repo libzip-devel
 }
 
 build_rabbitmq_c() {
-    log "Stage 3/5: rabbitmq-c (php85-pecl-amqp dependency)"
+    log "Stage 3/5: rabbitmq-c (php${PHP_MAJOR}-pecl-amqp dependency)"
     build_spec "${PROJECT_ROOT}/packaging/rabbitmq-c.spec"
     install_from_local_repo rabbitmq-c
     install_from_local_repo rabbitmq-c-devel
 }
 
 build_php() {
-    log "Stage 4/5: PHP ${PHP_VERSION} (requires re2c >= 3, libzip-devel)"
+    log "Stage 4/5: PHP ${PHP_VERSION}${PHP_PRERELEASE} (requires re2c >= 3, libzip-devel)"
     ensure_re2c
     ensure_libzip
 
-    build_spec "${PROJECT_ROOT}/packaging/php85.spec"
+    build_spec "${PROJECT_ROOT}/packaging/php.spec"
 
     log "Installing PHP RPMs for extension builds"
-    install_php85_stack
+    install_php_stack
 
-    php85_devel_installed || { log "ERROR: php85-devel not installed"; exit 1; }
-    detect_php_api
+    php_devel_installed || { log "ERROR: php${PHP_MAJOR}-devel not installed"; exit 1; }
 }
 
 imagick_build_available() {
@@ -381,11 +368,11 @@ build_single_extension() {
 
     log "Building extension: ${ext}"
     build_spec "${PROJECT_ROOT}/extensions/${ext}.spec"
-    install_from_local_repo "php85-pecl-${ext}"
+    install_from_local_repo "php${PHP_MAJOR}-pecl-${ext}"
 }
 
 build_extensions() {
-    log "Stage 5/5: PECL extensions (require php85-devel)"
+    log "Stage 5/5: PECL extensions (require php${PHP_MAJOR}-devel)"
     local ext
     for ext in "${PECL_EXTENSIONS[@]}"; do
         build_single_extension "${ext}"
@@ -432,8 +419,8 @@ main() {
             echo "  re2c            — bootstrap re2c >= 3.x" >&2
             echo "  libzip          — re2c, then libzip" >&2
             echo "  rabbitmq-c      — rabbitmq-c only" >&2
-            echo "  php             — re2c, libzip, then php85" >&2
-            echo "  extensions      — full chain through php85, then PECL" >&2
+            echo "  php             — re2c, libzip, then php${PHP_MAJOR}" >&2
+            echo "  extensions      — full chain through php${PHP_MAJOR}, then PECL" >&2
             echo "  extension:NAME  — single PECL extension (e.g. extension:redis)" >&2
             echo "  deps            — bootstrap packages only (re2c, libzip, rabbitmq-c)" >&2
             echo "  all             — complete repository (default)" >&2

@@ -1,7 +1,6 @@
 %global debug_package %{nil}
-%global php85_ver      8.5.12
-%global php85_confdir  /etc/php85
-%global php85_extdir   %{php85_confdir}/conf.d
-%global php85_moddir   /usr/lib64/php85/modules
+%global php_confdir  /etc/php%{php_major}
+%global php_extdir   %{php_confdir}/conf.d
+%global php_moddir   /usr/lib64/php%{php_major}/modules
 %define __phpize        /usr/bin/phpize
 %define __phpconfig     /usr/bin/php-config

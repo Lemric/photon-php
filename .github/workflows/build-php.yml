@@ -1,4 +1,4 @@
-name: Build PHP 8.5 RPMs
+name: Build PHP RPMs
 
 on:
   workflow_run:
@@ -7,8 +7,12 @@ on:
     branches: [main, master]
   workflow_dispatch:
     inputs:
+      php_series:
+        description: 'PHP series to build (85, 86; see packaging/series)'
+        required: false
+        default: '85'
       php_version:
-        description: 'PHP version to build'
+        description: 'PHP version recorded in repo metadata (should match packaging/series/<series>.conf)'
         required: false
         default: '8.5.12'
       publish_branch:
@@ -65,6 +69,7 @@ jobs:
       group: php
       checkout_ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
       php_version: ${{ github.event.inputs.php_version || '8.5.12' }}
+      php_series: ${{ github.event.inputs.php_series || '85' }}
       publish_branch: ${{ github.event.inputs.publish_branch || 'gh-pages' }}
       force_build: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_build && '1' || '0' }}
       publish_rpms: true
