@@ -59,7 +59,7 @@ find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 - Fetch sources from GitHub instead of pecl.php.net
 
 * Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 2.2.0-3
-- Rebuild against PHP 8.5.12
+- Rebuild against PHP 8.5.13
 
 * Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 2.2.0-2
 - Rebuild against PHP 8.5.11

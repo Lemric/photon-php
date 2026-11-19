@@ -443,8 +443,8 @@ test -f modules/sodium.so
 %doc README.md
 
 %changelog
-* Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 8.5.12-1
-- Upgrade to PHP 8.5.12 (security release)
+* Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 8.5.13-1
+- Upgrade to PHP 8.5.13 (security release)
 
 * Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 8.5.11-3
 - Rebuild against ICU 78 from current Photon 5.0 updates

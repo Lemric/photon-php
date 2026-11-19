@@ -21,7 +21,7 @@ on:
         description: 'PHP version for metadata and PHP builds'
         required: false
         type: string
-        default: '8.5.12'
+        default: '8.5.13'
       php_series:
         description: 'PHP series to build (packaging/series/<NN>.conf), e.g. 85 or 86'
         required: false

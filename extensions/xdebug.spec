@@ -62,7 +62,7 @@ find %{buildroot} -name '*.so' -exec strip --strip-unneeded {} \;
 - Upgrade to 3.5.3; fetch sources from GitHub instead of pecl.php.net
 
 * Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 3.5.0-3
-- Rebuild against PHP 8.5.12
+- Rebuild against PHP 8.5.13
 
 * Wed Oct 21 2026 Photon PHP Build <build@photon-php.local> - 3.5.0-2
 - Rebuild against PHP 8.5.11

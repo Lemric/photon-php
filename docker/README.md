@@ -13,7 +13,7 @@ PHP 8.5 container images for **VMware Photon OS 5.x** (`photon:5.0`), built from
 
 Nginx (reverse proxy) lives in `docker/8.5/photon/nginx/` — see [Nginx + FPM](#nginx--fpm) below.
 
-Tags: `8.5.12`, `latest`, plus per-arch tags (`8.5.12-x86_64`, …).
+Tags: `8.5.13`, `latest`, plus per-arch tags (`8.5.13-x86_64`, …).
 
 ## Structure
 
@@ -38,21 +38,21 @@ cp /path/to/gh-pages/x86_64/*.rpm docker/8.5/photon/rpm/repo/
 cp /path/to/gh-pages/RPM-GPG-KEY-photon-php docker/8.5/photon/rpm/
 
 docker build --target cli -f docker/8.5/photon/rpm/Dockerfile \
-  -t php:8.5.12-cli-photon docker/8.5/photon/rpm
+  -t php:8.5.13-cli-photon docker/8.5/photon/rpm
 
 docker build --target fpm -f docker/8.5/photon/rpm/Dockerfile \
-  -t php:8.5.12-fpm-photon docker/8.5/photon/rpm
+  -t php:8.5.13-fpm-photon docker/8.5/photon/rpm
 ```
 
 ## Usage
 
 ```bash
 # CLI
-docker run --rm -it ghcr.io/lemric/php85-photon-cli:8.5.12 php -v
-docker run --rm ghcr.io/lemric/php85-photon-cli:8.5.12 php script.php
+docker run --rm -it ghcr.io/lemric/php85-photon-cli:8.5.13 php -v
+docker run --rm ghcr.io/lemric/php85-photon-cli:8.5.13 php script.php
 
 # FPM
-docker run -d --name php-fpm -p 9000:9000 ghcr.io/lemric/php85-photon-fpm:8.5.12
+docker run -d --name php-fpm -p 9000:9000 ghcr.io/lemric/php85-photon-fpm:8.5.13
 ```
 
 PHP binaries and configuration use RPM paths (`/usr/bin/php`, `/etc/php85/`).
