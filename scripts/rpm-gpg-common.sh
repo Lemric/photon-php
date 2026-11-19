@@ -44,7 +44,7 @@ rpm_gpg_setup() {
         fi
     fi
 
-    local gpg_home key_id macros_file passphrase_arg
+    local gpg_home key_id macros_file
     gpg_home="$(rpm_gpg_home)"
     key_id="${RPM_GPG_KEY_ID:?RPM_GPG_KEY_ID is required when RPM_GPG_PRIVATE_KEY is set}"
     macros_file="${HOME}/.rpmmacros"
@@ -69,16 +69,18 @@ rpm_gpg_setup() {
     cat > "${macros_file}" <<EOF
 %_signature gpg
 %_gpg_name ${key_id}
+%_openpgp_sign_id ${key_id}
 %_gpg_path ${gpg_home}
+%_gpg_digest_algo sha256
 EOF
 
     if [ -n "${RPM_GPG_PASSPHRASE:-}" ]; then
         cat >> "${macros_file}" <<EOF
-%__gpg_sign_cmd %{__gpg} --homedir ${gpg_home} --batch --no-tty --no-armor --digest-algo sha256 --pinentry-mode loopback --passphrase ${RPM_GPG_PASSPHRASE} --no-permission-warning -q -u ${key_id} -sbo %{__signature_filename} %{__plaintext_filename}
+%_gpg_sign_cmd_extra_args --batch --no-tty --pinentry-mode loopback --passphrase ${RPM_GPG_PASSPHRASE} --no-permission-warning
 EOF
     else
         cat >> "${macros_file}" <<EOF
-%__gpg_sign_cmd %{__gpg} --homedir ${gpg_home} --batch --no-tty --no-armor --digest-algo sha256 --pinentry-mode loopback --no-permission-warning -q -u ${key_id} -sbo %{__signature_filename} %{__plaintext_filename}
+%_gpg_sign_cmd_extra_args --batch --no-tty --pinentry-mode loopback --no-permission-warning
 EOF
     fi
 
