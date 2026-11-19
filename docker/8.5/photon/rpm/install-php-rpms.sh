@@ -18,6 +18,20 @@ install_gpg() {
     rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-photon-php
 }
 
+tdnf_install() {
+    local attempt
+    for attempt in 1 2 3; do
+        if tdnf install -y "$@"; then
+            return 0
+        fi
+        [ "${attempt}" -lt 3 ] || break
+        echo "tdnf install failed (attempt ${attempt}/3); refreshing repository metadata" >&2
+        tdnf clean all
+        tdnf makecache -q
+    done
+    return 1
+}
+
 collect_existing_rpms() {
     local pattern rpm
     for pattern in "$@"; do
@@ -37,7 +51,7 @@ install_local_rpms() {
         return 1
     fi
 
-    tdnf install -y "${rpms[@]}"
+    tdnf_install "${rpms[@]}"
 }
 
 install_pecl_redis_stack() {
@@ -55,7 +69,7 @@ install_pecl_redis_stack() {
         return 0
     fi
 
-    tdnf install -y "${pecl_rpms[@]}"
+    tdnf_install "${pecl_rpms[@]}"
 }
 
 common_rpms() {
@@ -103,10 +117,15 @@ fpm_rpms() {
 }
 
 tdnf makecache -q
-tdnf install -y rpm
+tdnf_install rpm
 # Bring every base package up to current Photon updates (security fixes) before
 # the local PHP RPM transaction — the photon:5.0 base image lags behind the repos.
 tdnf update -y
+# The update can replace both photon-repos and tdnf. Metadata loaded before that
+# transaction may point at the old repository state and make base dependencies
+# appear unavailable, so rebuild the cache with the newly installed repo config.
+tdnf clean all
+tdnf makecache -q
 install_gpg
 
 case "${VARIANT}" in

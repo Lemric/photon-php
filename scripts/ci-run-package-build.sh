@@ -50,6 +50,10 @@ docker "${docker_args[@]}" "${BUILDER_IMAGE}" \
     bash -c "scripts/${BUILD_SCRIPT} ${STAGE}"
 
 if ! ls "${WORKSPACE}/repo/${ARCH}"/*.rpm >/dev/null 2>&1; then
+    if [ "${STAGE}" = "extension:imagick" ]; then
+        log "Imagick skipped on ${ARCH} — ImageMagick-devel is unavailable"
+        exit 0
+    fi
     log "ERROR: no RPMs produced for ${GROUP}/${STAGE} on ${ARCH}" >&2
     exit 1
 fi
