@@ -116,16 +116,19 @@ fpm_rpms() {
     php-fpm -t
 }
 
+# photon-updates is occasionally published non-atomically (repodata points to
+# RPMs that already return 404). The full Photon repository contains the same
+# package history and gives tdnf a consistent provider fallback.
+if [ -f /etc/yum.repos.d/photon.repo ]; then
+    sed -i '/\[photon\]/,/^$/ s/^enabled=0/enabled=1/' /etc/yum.repos.d/photon.repo
+fi
+
 tdnf makecache -q
 tdnf_install rpm
-# Bring every base package up to current Photon updates (security fixes) before
-# the local PHP RPM transaction — the photon:5.0 base image lags behind the repos.
-tdnf update -y
-# The update can replace both photon-repos and tdnf. Metadata loaded before that
-# transaction may point at the old repository state and make base dependencies
-# appear unavailable, so rebuild the cache with the newly installed repo config.
-tdnf clean all
-tdnf makecache -q
+# Do not run a full upgrade here. On Photon 5 x86_64 the upgraded solver can
+# lose providers from the enabled repository during the same transaction.
+# Installing the local RPM set below upgrades only the runtime dependencies it
+# actually needs and keeps repository resolution consistent.
 install_gpg
 
 case "${VARIANT}" in
