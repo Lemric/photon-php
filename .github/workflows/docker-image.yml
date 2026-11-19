@@ -200,6 +200,7 @@ jobs:
       ((github.event_name == 'workflow_run') ||
        (github.event_name == 'workflow_dispatch' && inputs.push_image))
     strategy:
+      fail-fast: false
       matrix:
         variant: [base, cli, fpm]
     steps:
@@ -232,15 +233,13 @@ jobs:
           VARIANT="${{ matrix.variant }}"
           IMAGE="${OWNER}/php85-photon-${VARIANT}"
 
-          docker manifest create "${IMAGE}:${VERSION}" \
+          docker buildx imagetools create --tag "${IMAGE}:${VERSION}" \
             "${IMAGE}:${VERSION}-x86_64" \
             "${IMAGE}:${VERSION}-aarch64"
-          docker manifest push "${IMAGE}:${VERSION}"
 
-          docker manifest create "${IMAGE}:latest" \
+          docker buildx imagetools create --tag "${IMAGE}:latest" \
             "${IMAGE}:${VERSION}-x86_64" \
             "${IMAGE}:${VERSION}-aarch64"
-          docker manifest push "${IMAGE}:latest"
 
   docker-manifest-legacy:
     name: Multi-arch manifest (legacy php85-photon)
@@ -278,12 +277,10 @@ jobs:
           IMAGE="$(echo 'ghcr.io/${{ github.repository_owner }}/php85-photon' | tr '[:upper:]' '[:lower:]')"
           VERSION="${{ steps.meta.outputs.php_version }}"
 
-          docker manifest create "${IMAGE}:${VERSION}" \
+          docker buildx imagetools create --tag "${IMAGE}:${VERSION}" \
             "${IMAGE}:${VERSION}-x86_64" \
             "${IMAGE}:${VERSION}-aarch64"
-          docker manifest push "${IMAGE}:${VERSION}"
 
-          docker manifest create "${IMAGE}:latest" \
+          docker buildx imagetools create --tag "${IMAGE}:latest" \
             "${IMAGE}:${VERSION}-x86_64" \
             "${IMAGE}:${VERSION}-aarch64"
-          docker manifest push "${IMAGE}:latest"
