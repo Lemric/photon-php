@@ -115,18 +115,20 @@ ensure_igbinary() {
 }
 
 php_devel_installed() {
-    rpm -q php${PHP_MAJOR}-devel >/dev/null 2>&1
+    [ "$(rpm -q --qf '%{VERSION}' "php${PHP_MAJOR}-devel" 2>/dev/null || true)" = "${PHP_VERSION}" ]
 }
 
 install_php_stack() {
     local rpms
     rpms="$(
-        find "${OUTPUT_DIR}" -maxdepth 1 -name "php${PHP_MAJOR}*.${ARCH}.rpm" \
+        find "${OUTPUT_DIR}" -maxdepth 1 \
+            \( -name "php${PHP_MAJOR}-${PHP_VERSION}-*.${ARCH}.rpm" \
+               -o -name "php${PHP_MAJOR}-*-${PHP_VERSION}-*.${ARCH}.rpm" \) \
             ! -name "php${PHP_MAJOR}-pecl-*" ! -name '*.src.rpm' -type f 2>/dev/null \
             | sort | tr '\n' ' '
     )"
     if [ -z "${rpms}" ]; then
-        log "ERROR: php${PHP_MAJOR} packages not found in ${OUTPUT_DIR}" >&2
+        log "ERROR: PHP ${PHP_VERSION} packages not found in ${OUTPUT_DIR}" >&2
         return 1
     fi
     refresh_local_repo
@@ -294,11 +296,11 @@ ensure_rabbitmq_c() {
 
 ensure_php() {
     if php_devel_installed; then
-        log "php${PHP_MAJOR}-devel already installed"
+        log "php${PHP_MAJOR}-devel ${PHP_VERSION} already installed"
         return 0
     fi
-    if [ -n "$(binary_rpms_in_output "php${PHP_MAJOR}-devel-*.${ARCH}.rpm")" ]; then
-        log "Installing pre-built php${PHP_MAJOR} from ${OUTPUT_DIR}"
+    if [ -n "$(binary_rpms_in_output "php${PHP_MAJOR}-devel-${PHP_VERSION}-*.${ARCH}.rpm")" ]; then
+        log "Installing pre-built PHP ${PHP_VERSION} from ${OUTPUT_DIR}"
         install_php_stack
         php_devel_installed && return 0
     fi

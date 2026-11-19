@@ -243,8 +243,9 @@ jobs:
       inputs.publish_rpms &&
       needs.plan.outputs.has_builds == 'true' &&
       needs.plan.outputs.wave0 != '[]' &&
-      needs.build-wave-0.result != 'cancelled'
+      needs.build-wave-0.result == 'success'
     strategy:
+      fail-fast: false
       matrix:
         arch: [x86_64, aarch64]
     steps:
@@ -276,12 +277,16 @@ jobs:
   build-wave-1:
     name: '${{ matrix.stage }} (${{ matrix.arch }})'
     runs-on: ${{ matrix.runner }}
-    needs: [plan, prepare-build-env, publish-wave-0]
+    needs: [plan, prepare-build-env, build-wave-0, publish-wave-0]
     if: |
       always() &&
       needs.plan.outputs.has_builds == 'true' &&
       needs.plan.outputs.wave1 != '[]' &&
-      (needs.publish-wave-0.result == 'success' || needs.publish-wave-0.result == 'skipped')
+      (
+        needs.plan.outputs.wave0 == '[]' ||
+        (inputs.publish_rpms && needs.publish-wave-0.result == 'success') ||
+        (!inputs.publish_rpms && needs.build-wave-0.result == 'success')
+      )
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -364,8 +369,9 @@ jobs:
       inputs.publish_rpms &&
       needs.plan.outputs.has_builds == 'true' &&
       needs.plan.outputs.wave1 != '[]' &&
-      needs.build-wave-1.result != 'cancelled'
+      needs.build-wave-1.result == 'success'
     strategy:
+      fail-fast: false
       matrix:
         arch: [x86_64, aarch64]
     steps:
@@ -397,12 +403,16 @@ jobs:
   build-wave-2:
     name: '${{ matrix.stage }} (${{ matrix.arch }})'
     runs-on: ${{ matrix.runner }}
-    needs: [plan, prepare-build-env, publish-wave-1]
+    needs: [plan, prepare-build-env, build-wave-1, publish-wave-1]
     if: |
       always() &&
       needs.plan.outputs.has_builds == 'true' &&
       needs.plan.outputs.wave2 != '[]' &&
-      (needs.publish-wave-1.result == 'success' || needs.publish-wave-1.result == 'skipped')
+      (
+        needs.plan.outputs.wave1 == '[]' ||
+        (inputs.publish_rpms && needs.publish-wave-1.result == 'success') ||
+        (!inputs.publish_rpms && needs.build-wave-1.result == 'success')
+      )
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -481,8 +491,9 @@ jobs:
       inputs.publish_rpms &&
       needs.plan.outputs.has_builds == 'true' &&
       needs.plan.outputs.wave2 != '[]' &&
-      needs.build-wave-2.result != 'cancelled'
+      needs.build-wave-2.result == 'success'
     strategy:
+      fail-fast: false
       matrix:
         arch: [x86_64, aarch64]
     steps:

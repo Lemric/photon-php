@@ -74,11 +74,11 @@ EOF
 
     if [ -n "${RPM_GPG_PASSPHRASE:-}" ]; then
         cat >> "${macros_file}" <<EOF
-%__gpg_sign_cmd %{__gpg} gpg --homedir ${gpg_home} --batch --no-tty --no-armor --digest-algo sha256 --pinentry-mode loopback --passphrase ${RPM_GPG_PASSPHRASE} --no-permission-warning -q -u ${key_id} -sbo %{__signature_filename} %{__plaintext_filename}
+%__gpg_sign_cmd %{__gpg} --homedir ${gpg_home} --batch --no-tty --no-armor --digest-algo sha256 --pinentry-mode loopback --passphrase ${RPM_GPG_PASSPHRASE} --no-permission-warning -q -u ${key_id} -sbo %{__signature_filename} %{__plaintext_filename}
 EOF
     else
         cat >> "${macros_file}" <<EOF
-%__gpg_sign_cmd %{__gpg} gpg --homedir ${gpg_home} --batch --no-tty --no-armor --digest-algo sha256 --pinentry-mode loopback --no-permission-warning -q -u ${key_id} -sbo %{__signature_filename} %{__plaintext_filename}
+%__gpg_sign_cmd %{__gpg} --homedir ${gpg_home} --batch --no-tty --no-armor --digest-algo sha256 --pinentry-mode loopback --no-permission-warning -q -u ${key_id} -sbo %{__signature_filename} %{__plaintext_filename}
 EOF
     fi
 
