@@ -139,7 +139,7 @@ tdnf install -y php85 php85-fpm php85-opcache
 tdnf install -y \
   php85 php85-cli php85-fpm php85-common php85-opcache \
   php85-mbstring php85-intl php85-xml php85-curl php85-gd \
-  php85-zip php85-bcmath php85-sodium php85-mysqlnd php85-pgsql \
+  php85-zip php85-bcmath php85-sodium php85-phar php85-mysqlnd php85-pgsql \
   php85-pecl-redis php85-pecl-igbinary
 ```
 

@@ -616,13 +616,16 @@ jobs:
                 /repo/php${PHP_SERIES}-opcache-*.rpm /repo/php${PHP_SERIES}-mbstring-*.rpm /repo/php${PHP_SERIES}-intl-*.rpm \
                 /repo/php${PHP_SERIES}-xml-*.rpm /repo/php${PHP_SERIES}-curl-*.rpm /repo/php${PHP_SERIES}-gd-*.rpm \
                 /repo/php${PHP_SERIES}-zip-*.rpm /repo/php${PHP_SERIES}-bcmath-*.rpm /repo/php${PHP_SERIES}-sodium-*.rpm \
-                /repo/php${PHP_SERIES}-mysqlnd-*.rpm /repo/php${PHP_SERIES}-pgsql-*.rpm /repo/php${PHP_SERIES}-[0-9]*.rpm \
+                /repo/php${PHP_SERIES}-mysqlnd-*.rpm /repo/php${PHP_SERIES}-pgsql-*.rpm /repo/php${PHP_SERIES}-phar-*.rpm \
+                /repo/php${PHP_SERIES}-[0-9]*.rpm \
                 \"\$(pick_latest 'php${PHP_SERIES}-pecl-redis-*.rpm')\" \
                 \"\$(pick_latest 'php${PHP_SERIES}-pecl-igbinary-*.rpm')\"
 
               php -v | grep -E \"PHP ${PHP_BRANCH}[.][0-9]+\"
               php -m | grep -Ei '^(Zend OPcache|mbstring|intl|curl|gd|zip|bcmath|sodium|dom|xml|mysqli|pdo_mysql|pgsql|pdo_pgsql|redis|igbinary)$'
               php -r 'exit(defined(\"PASSWORD_ARGON2ID\") ? 0 : 1);'
+              php -r 'exit(extension_loaded(\"phar\") ? 0 : 1);'
+              phar version
               php-fpm -t
               id php-fpm
               echo 'All tests passed'

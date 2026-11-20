@@ -88,6 +88,7 @@ common_rpms() {
         "${REPO}"/php85-bcmath-*.rpm \
         "${REPO}"/php85-sodium-*.rpm \
         "${REPO}"/php85-sockets-*.rpm \
+        "${REPO}"/php85-phar-*.rpm \
         "${REPO}"/php85-mysqlnd-*.rpm \
         "${REPO}"/php85-pgsql-*.rpm
     install_pecl_redis_stack

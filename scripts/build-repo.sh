@@ -53,7 +53,7 @@ cat > "${OUTPUT_DIR}/repodata.json" << EOF
     "php${PHP_MAJOR}", "php${PHP_MAJOR}-cli", "php${PHP_MAJOR}-fpm", "php${PHP_MAJOR}-common", "php${PHP_MAJOR}-devel",
     "php${PHP_MAJOR}-opcache", "php${PHP_MAJOR}-mbstring", "php${PHP_MAJOR}-intl", "php${PHP_MAJOR}-xml",
     "php${PHP_MAJOR}-curl", "php${PHP_MAJOR}-gd", "php${PHP_MAJOR}-zip", "php${PHP_MAJOR}-bcmath", "php${PHP_MAJOR}-sodium", "php${PHP_MAJOR}-soap",
-    "php${PHP_MAJOR}-sockets", "php${PHP_MAJOR}-pcntl", "php${PHP_MAJOR}-mysqlnd", "php${PHP_MAJOR}-pgsql",
+    "php${PHP_MAJOR}-sockets", "php${PHP_MAJOR}-pcntl", "php${PHP_MAJOR}-phar", "php${PHP_MAJOR}-mysqlnd", "php${PHP_MAJOR}-pgsql",
     "php${PHP_MAJOR}-pecl-redis", "php${PHP_MAJOR}-pecl-igbinary", "php${PHP_MAJOR}-pecl-apcu",
     "php${PHP_MAJOR}-pecl-amqp", "php${PHP_MAJOR}-pecl-imagick", "php${PHP_MAJOR}-pecl-xdebug"
   ]
